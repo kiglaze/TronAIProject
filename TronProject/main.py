@@ -7,9 +7,16 @@ Exercises
 3. Allow the tron player to go around the edge of the screen.
 4. How would you create a computer player?
 """
-
+import math
 from turtle import *
 from freegames import square, vector
+import tkinter.simpledialog as simpledialog
+
+def ask_to_play_ai():
+    """Asks the player if they are ready to play."""
+    # This uses the underlying Tkinter root window to ask for user input.
+    answer = simpledialog.askstring("AI/Human?", "Do you want to play an AI or a Human? (AI/Human)")
+    return answer.lower() == 'ai'
 
 def inside(head):
     """Return True if head inside screen."""
@@ -55,6 +62,13 @@ def draw():
         write_text("Game Over!\nRed wins.", 0, 0, "center")
         return
 
+    # Can be used to power the AI's rotation.
+    global p2aim_rotate_val
+    if p2aim_rotate_val != 0:
+        p2aim.rotate(p2aim_rotate_val)
+        p2aim_rotate_val = 0
+    # ###
+
     p1body.add(p1head)
     p2body.add(p2head)
 
@@ -64,6 +78,7 @@ def draw():
     ontimer(draw, 100)
 
 if __name__ == '__main__':
+    p2aim_rotate_val = 0
     p1xy = vector(-100, 0)
     p1aim = vector(4, 0)
     p1body = set()
@@ -78,13 +93,17 @@ if __name__ == '__main__':
     listen()
     onkey(lambda: p1aim.rotate(90), 'a')
     onkey(lambda: p1aim.rotate(-90), 'd')
-    onkey(lambda: p2aim.rotate(90), 'j')
-    onkey(lambda: p2aim.rotate(-90), 'l')
+    if ask_to_play_ai() == False:
+        onkey(lambda: p2aim.rotate(90), 'j')
+        onkey(lambda: p2aim.rotate(-90), 'l')
 
     draw_border()
     write_text("TRON", 0, 240, "center")
     write_text("Red Player: \nLeft: 'a'\nRight: 'd'", -150, -270, "left")
-    write_text("Blue Player: \nLeft: 'j'\nRight: 'l'", 150, -270, "right")
+    write_text("Blue Player (If Human): \nLeft: 'j'\nRight: 'l'", 150, -270, "right")
+
 
     draw()
+
     done()
+
