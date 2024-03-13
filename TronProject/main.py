@@ -32,16 +32,9 @@ def draw_border():
     border_turtle.goto(-205, -205)  # Slightly larger than the inside boundary
     border_turtle.pendown()
     border_turtle.pensize(10)  # Increased pen size for a thicker border
-    border_turtle.forward(410)
-    border_turtle.left(90)
-    border_turtle.forward(410)
-    border_turtle.left(90)
-    border_turtle.forward(410)
-    border_turtle.left(90)
-    border_turtle.forward(410)
-    #for _ in range(4):
-    #    border_turtle.forward(400)  # Matches the adjusted coordinates
-    #    border_turtle.left(90)
+    for _ in range(4):
+        border_turtle.forward(410)  # Matches the adjusted coordinates
+        border_turtle.left(90)
     border_turtle.penup()
 
 def draw():
@@ -79,7 +72,7 @@ if __name__ == '__main__':
     p2aim = vector(-4, 0)
     p2body = set()
 
-    setup(450, 500, 370, 0)
+    setup(450, 600, 0, 0)
     hideturtle()
     tracer(False)
     listen()
@@ -89,8 +82,9 @@ if __name__ == '__main__':
     onkey(lambda: p2aim.rotate(-90), 'l')
 
     draw_border()
-    write_text("Red Player: \nLeft: 'a'\nRight: 'd'", -150, -190, "left")
-    write_text("Blue Player: \nLeft: 'j'\nRight: 'l'", 150, -190, "right")
+    write_text("TRON", 0, 240, "center")
+    write_text("Red Player: \nLeft: 'a'\nRight: 'd'", -150, -270, "left")
+    write_text("Blue Player: \nLeft: 'j'\nRight: 'l'", 150, -270, "right")
 
     draw()
     done()
