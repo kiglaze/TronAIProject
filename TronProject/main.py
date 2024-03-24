@@ -12,6 +12,49 @@ from turtle import *
 from freegames import square, vector
 import tkinter.simpledialog as simpledialog
 
+class Player:
+    def __init__(self, position, aim, color, key_left, key_right, is_ai=False):
+        self.position = position
+        #self.aim = vector(4 if color == 'red' else -4, 0)
+        self.aim = aim
+        self.body = set()
+        self.color = color
+        self.key_left = key_left
+        self.key_right = key_right
+        self.is_ai = is_ai
+
+    def get_position(self):
+        return self.position
+
+    def get_aim(self):
+        return self.aim
+
+    def rotate_left(self):
+        self.aim.rotate(90)
+
+    def rotate_right(self):
+        self.aim.rotate(-90)
+
+    def get_key_right(self):
+        return self.key_right
+
+    def get_key_left(self):
+        return self.key_left
+
+    def get_body(self):
+        return self.body
+
+    def move(self):
+        # Updated for edge wrapping
+        next_position = self.position + self.aim
+        next_position.x = (next_position.x + 200) % 400 - 200
+        next_position.y = (next_position.y + 200) % 400 - 200
+        self.position = next_position
+        self.body.add(self.position.copy())
+
+    def add_to_body(self, head_val):
+        self.body.add(head_val)
+
 def ask_to_play_ai():
     """Asks the player if they are ready to play."""
     # This uses the underlying Tkinter root window to ask for user input.
@@ -22,13 +65,14 @@ def inside(head):
     """Return True if head inside screen."""
     return -200 < head.x < 200 and -200 < head.y < 200
 
-def write_text(text, x_loc, y_loc, align):
+def write_text(text, x_loc, y_loc, align, turtle=None):
     # Instruction turtle
-    instruct_turtle = Turtle()
-    instruct_turtle.hideturtle()
-    instruct_turtle.penup()
-    instruct_turtle.goto(x_loc, y_loc)
-    instruct_turtle.write(text, align=align, font=("Arial", 12, "normal"))
+    if(turtle == None):
+        turtle = Turtle()
+        turtle.hideturtle()
+    turtle.penup()
+    turtle.goto(x_loc, y_loc)
+    turtle.write(text, align=align, font=("Arial", 12, "normal"))
 
 def draw_border():
     """Draws a thicker black border around the game window."""
@@ -44,22 +88,24 @@ def draw_border():
         border_turtle.left(90)
     border_turtle.penup()
 
-def draw():
+def draw(center_turtle):
     """Advance players and draw game."""
-    p1xy.move(p1aim)
-    p1head = p1xy.copy()
+    #p1xy.move(p1aim)
+    p1.move()
+    p1head = p1.get_position().copy()
 
-    p2xy.move(p2aim)
-    p2head = p2xy.copy()
+    #p2xy.move(p2aim)
+    p2.move()
+    p2head = p2.get_position().copy()
 
-    if not inside(p1head) or p1head in p2body:
+    if not inside(p1head) or p1head in p2.get_body():
         print('Player blue wins!')
-        write_text("Game Over!\nBlue wins.", 0, 0, "center")
+        write_text("Game Over!\nBlue wins.", 0, 0, "center", center_turtle)
         return
 
-    if not inside(p2head) or p2head in p1body:
+    if not inside(p2head) or p2head in p1.get_body():
         print('Player red wins!')
-        write_text("Game Over!\nRed wins.", 0, 0, "center")
+        write_text("Game Over!\nRed wins.", 0, 0, "center", center_turtle)
         return
 
     # Can be used to power the AI's rotation.
@@ -69,33 +115,41 @@ def draw():
         p2aim_rotate_val = 0
     # ###
 
-    p1body.add(p1head)
-    p2body.add(p2head)
+    #p1body.add(p1head)
+    p1.add_to_body(p1head)
+    #p2body.add(p2head)
+    p2.add_to_body(p2head)
 
-    square(p1xy.x, p1xy.y, 3, 'red')
-    square(p2xy.x, p2xy.y, 3, 'blue')
+    square(p1.get_position().x, p1.get_position().y, 3, 'red')
+    square(p2.get_position().x, p2.get_position().y, 3, 'blue')
     update()
-    ontimer(draw, 100)
+    ontimer(lambda: draw(center_turtle), 100)
 
 if __name__ == '__main__':
     p2aim_rotate_val = 0
+
     p1xy = vector(-100, 0)
     p1aim = vector(4, 0)
-    p1body = set()
+    p1 = Player(p1xy, p1aim, 'red', 'a', 'd')
+    #p1body = set()
 
     p2xy = vector(100, 0)
     p2aim = vector(-4, 0)
-    p2body = set()
+    p2 = Player(p2xy, p2aim, 'blue', 'j', 'l')
+    #p2body = set()
 
     setup(450, 600, 0, 0)
     hideturtle()
+    center_turtle = Turtle()
+    center_turtle.hideturtle()
+
     tracer(False)
     listen()
-    onkey(lambda: p1aim.rotate(90), 'a')
-    onkey(lambda: p1aim.rotate(-90), 'd')
+    onkey(lambda: p1.rotate_left(), p1.get_key_left())
+    onkey(lambda: p1.rotate_right(), p1.get_key_right())
     if ask_to_play_ai() == False:
-        onkey(lambda: p2aim.rotate(90), 'j')
-        onkey(lambda: p2aim.rotate(-90), 'l')
+        onkey(lambda: p2.rotate_left(), p2.get_key_left())
+        onkey(lambda: p2.rotate_right(), p2.get_key_right())
 
     draw_border()
     write_text("TRON", 0, 240, "center")
@@ -103,7 +157,7 @@ if __name__ == '__main__':
     write_text("Blue Player (If Human): \nLeft: 'j'\nRight: 'l'", 150, -270, "right")
 
 
-    draw()
+    draw(center_turtle)
 
     done()
 
