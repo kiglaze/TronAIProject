@@ -76,14 +76,14 @@ def inside(head):
     """Return True if head inside screen."""
     return -200 < head.x < 200 and -200 < head.y < 200
 
-def write_text(text, x_loc, y_loc, align, text_turtle=None):
+def write_text(text, x_loc, y_loc, align, font_size=12, text_turtle=None):
     # Instruction turtle
     if(text_turtle == None):
         text_turtle = turtle.Turtle()
         text_turtle.hideturtle()
     text_turtle.penup()
     text_turtle.goto(x_loc, y_loc)
-    text_turtle.write(text, align=align, font=("Arial", 12, "normal"))
+    text_turtle.write(text, align=align, font=("Arial", font_size, "normal"))
 
 def draw_border():
     """Draws a thicker black border around the game window."""
@@ -122,14 +122,19 @@ def draw(center_turtle):
     p2.move()
     p2head = p2.get_position().copy()
 
-    if not inside(p1head) or p1head in p2.get_body():
-        print('Player blue wins!')
-        write_text("Game Over!\nBlue wins.", 0, 0, "center", center_turtle)
+    p1_failure = not inside(p1head) or p1head in p2.get_body()
+    p2_failure = not inside(p2head) or p2head in p1.get_body()
+    if p1_failure and p2_failure:
+        print('TIE!')
+        write_text("Game Over!\nTIE.", 0, 0, "center", 20, center_turtle)
         return
-
-    if not inside(p2head) or p2head in p1.get_body():
+    elif p1_failure:
+        print('Player blue wins!')
+        write_text("Game Over!\nBlue wins.", 0, 0, "center", 20, center_turtle)
+        return
+    elif p2_failure:
         print('Player red wins!')
-        write_text("Game Over!\nRed wins.", 0, 0, "center", center_turtle)
+        write_text("Game Over!\nRed wins.", 0, 0, "center", 20, center_turtle)
         return
 
     #p1body.add(p1head)
