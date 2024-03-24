@@ -12,6 +12,7 @@ import turtle
 from freegames import square, vector
 import tkinter.simpledialog as simpledialog
 import math
+import random
 
 MOVEMENT_SIZE = 4
 
@@ -148,9 +149,21 @@ def draw(center_turtle):
         peril_movements = p2.get_projected_movements(20) & p1.get_body()
         turtle.colormode(255)
         if head_manhattan_distance < (10 * MOVEMENT_SIZE):
+            # the most evasive behavior
             turtle.bgcolor(255, 200, 200)
+            random_number = random.randint(1, 5)
+            if random_number == 1:
+                p2.rotate_right()
+            elif random_number == 2:
+                p1.rotate_left()
         elif len(peril_movements) > 0:
+            # mid-tier (slightly) evasive behavior
             turtle.bgcolor(255, 200, 100)
+            random_number = random.randint(1, 12)
+            if random_number == 1:
+                p2.rotate_right()
+            elif random_number == 2:
+                p1.rotate_left()
         else:
             turtle.bgcolor('white')
 
