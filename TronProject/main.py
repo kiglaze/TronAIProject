@@ -11,6 +11,9 @@ import math
 import turtle
 from freegames import square, vector
 import tkinter.simpledialog as simpledialog
+import math
+
+MOVEMENT_SIZE = 4
 
 class Player:
     def __init__(self, position, aim, color, key_left, key_right, is_ai=False):
@@ -88,6 +91,19 @@ def draw_border():
         border_turtle.left(90)
     border_turtle.penup()
 
+def euclidean_distance(point1, point2):
+    """Calculate the Euclidean distance between two 2D points."""
+    x1, y1 = point1
+    x2, y2 = point2
+    distance = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+    return distance
+
+def manhattan_distance(point1, point2):
+    x1, y1 = point1
+    x2, y2 = point2
+    distance = abs(x2 - x1) + abs(y2 - y1)
+    return distance
+
 def draw(center_turtle):
     """Advance players and draw game."""
     #p1xy.move(p1aim)
@@ -116,22 +132,37 @@ def draw(center_turtle):
     square(p1.get_position().x, p1.get_position().y, 3, 'red')
     square(p2.get_position().x, p2.get_position().y, 3, 'blue')
     turtle.update()
+
+    # DECISION TREE LOGIC HERE
+    # background color changes indicate what behavior the AI should be performing
+    if p2.is_ai:
+        head_euclidean_distance = euclidean_distance(p2.get_position(), p1.get_position())
+        head_manhattan_distance = manhattan_distance(p2.get_position(), p1.get_position())
+        if head_manhattan_distance < (10 * MOVEMENT_SIZE):
+            turtle.bgcolor('lightblue')
+        elif 1:
+            turtle.bgcolor('lightgreen')
+        else:
+            turtle.bgcolor('white')
+
+
     turtle.ontimer(lambda: draw(center_turtle), 100)
 
 if __name__ == '__main__':
     p1xy = vector(-100, 0)
-    p1aim = vector(4, 0)
+    p1aim = vector(MOVEMENT_SIZE, 0)
     p1 = Player(p1xy, p1aim, 'red', 'a', 'd')
     #p1body = set()
 
     p2xy = vector(100, 0)
-    p2aim = vector(-4, 0)
+    p2aim = vector(-1 * MOVEMENT_SIZE, 0)
     p2 = Player(p2xy, p2aim, 'blue', 'j', 'l', is_ai=ask_to_play_ai())
     #p2body = set()
 
     players = [p1, p2]
 
     turtle.setup(450, 600, 0, 0)
+    turtle.bgcolor('white')
     turtle.hideturtle()
 
     turtle.tracer(False)
