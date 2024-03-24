@@ -8,7 +8,7 @@ Exercises
 4. How would you create a computer player?
 """
 import math
-from turtle import *
+import turtle
 from freegames import square, vector
 import tkinter.simpledialog as simpledialog
 
@@ -65,18 +65,18 @@ def inside(head):
     """Return True if head inside screen."""
     return -200 < head.x < 200 and -200 < head.y < 200
 
-def write_text(text, x_loc, y_loc, align, turtle=None):
+def write_text(text, x_loc, y_loc, align, text_turtle=None):
     # Instruction turtle
-    if(turtle == None):
-        turtle = Turtle()
-        turtle.hideturtle()
-    turtle.penup()
-    turtle.goto(x_loc, y_loc)
-    turtle.write(text, align=align, font=("Arial", 12, "normal"))
+    if(text_turtle == None):
+        text_turtle = turtle.Turtle()
+        text_turtle.hideturtle()
+    text_turtle.penup()
+    text_turtle.goto(x_loc, y_loc)
+    text_turtle.write(text, align=align, font=("Arial", 12, "normal"))
 
 def draw_border():
     """Draws a thicker black border around the game window."""
-    border_turtle = Turtle()
+    border_turtle = turtle.Turtle()
     border_turtle.hideturtle()
     border_turtle.penup()
     border_turtle.color('black')
@@ -108,13 +108,6 @@ def draw(center_turtle):
         write_text("Game Over!\nRed wins.", 0, 0, "center", center_turtle)
         return
 
-    # Can be used to power the AI's rotation.
-    global p2aim_rotate_val
-    if p2aim_rotate_val != 0:
-        p2aim.rotate(p2aim_rotate_val)
-        p2aim_rotate_val = 0
-    # ###
-
     #p1body.add(p1head)
     p1.add_to_body(p1head)
     #p2body.add(p2head)
@@ -122,12 +115,10 @@ def draw(center_turtle):
 
     square(p1.get_position().x, p1.get_position().y, 3, 'red')
     square(p2.get_position().x, p2.get_position().y, 3, 'blue')
-    update()
-    ontimer(lambda: draw(center_turtle), 100)
+    turtle.update()
+    turtle.ontimer(lambda: draw(center_turtle), 100)
 
 if __name__ == '__main__':
-    p2aim_rotate_val = 0
-
     p1xy = vector(-100, 0)
     p1aim = vector(4, 0)
     p1 = Player(p1xy, p1aim, 'red', 'a', 'd')
@@ -135,29 +126,31 @@ if __name__ == '__main__':
 
     p2xy = vector(100, 0)
     p2aim = vector(-4, 0)
-    p2 = Player(p2xy, p2aim, 'blue', 'j', 'l')
+    p2 = Player(p2xy, p2aim, 'blue', 'j', 'l', is_ai=ask_to_play_ai())
     #p2body = set()
 
-    setup(450, 600, 0, 0)
-    hideturtle()
-    center_turtle = Turtle()
-    center_turtle.hideturtle()
+    players = [p1, p2]
 
-    tracer(False)
-    listen()
-    onkey(lambda: p1.rotate_left(), p1.get_key_left())
-    onkey(lambda: p1.rotate_right(), p1.get_key_right())
-    if ask_to_play_ai() == False:
-        onkey(lambda: p2.rotate_left(), p2.get_key_left())
-        onkey(lambda: p2.rotate_right(), p2.get_key_right())
+    turtle.setup(450, 600, 0, 0)
+    turtle.hideturtle()
+
+    turtle.tracer(False)
+    turtle.listen()
+
+    for player in players:
+        if not player.is_ai:
+            turtle.onkey(player.rotate_left, player.key_left)
+            turtle.onkey(player.rotate_right, player.key_right)
 
     draw_border()
+
+    center_turtle = turtle.Turtle()
+    center_turtle.hideturtle()
     write_text("TRON", 0, 240, "center")
     write_text("Red Player: \nLeft: 'a'\nRight: 'd'", -150, -270, "left")
     write_text("Blue Player (If Human): \nLeft: 'j'\nRight: 'l'", 150, -270, "right")
 
-
     draw(center_turtle)
 
-    done()
+    turtle.done()
 
