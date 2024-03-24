@@ -55,6 +55,13 @@ class Player:
         self.position = next_position
         self.body.add(self.position.copy())
 
+    def get_projected_movements(self, num_movements):
+        set_projected = set()
+        for number in range(1, num_movements):
+            set_projected.add(self.position + (number * self.aim))
+        return set_projected
+
+
     def add_to_body(self, head_val):
         self.body.add(head_val)
 
@@ -138,10 +145,12 @@ def draw(center_turtle):
     if p2.is_ai:
         head_euclidean_distance = euclidean_distance(p2.get_position(), p1.get_position())
         head_manhattan_distance = manhattan_distance(p2.get_position(), p1.get_position())
+        peril_movements = p2.get_projected_movements(20) & p1.get_body()
+        turtle.colormode(255)
         if head_manhattan_distance < (10 * MOVEMENT_SIZE):
-            turtle.bgcolor('lightblue')
-        elif 1:
-            turtle.bgcolor('lightgreen')
+            turtle.bgcolor(255, 200, 200)
+        elif len(peril_movements) > 0:
+            turtle.bgcolor(255, 200, 100)
         else:
             turtle.bgcolor('white')
 
