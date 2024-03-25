@@ -149,20 +149,23 @@ def draw(center_turtle):
     # DECISION TREE LOGIC HERE
     # background color changes indicate what behavior the AI should be performing
     if p2.is_ai:
-        head_euclidean_distance = euclidean_distance(p2.get_position(), p1.get_position())
         head_manhattan_distance = manhattan_distance(p2.get_position(), p1.get_position())
+        # Checks if any of the projected movements of player 2 and any of the pixels in player 1 are the same.
         peril_movements = p2.get_projected_movements(20) & p1.get_body()
+        # Allows for setting the background color to help debug.
         turtle.colormode(255)
+        # If the head of p2 is close to the head of p1.
         if head_manhattan_distance < (10 * MOVEMENT_SIZE):
-            # the most evasive behavior
+            # Placeholder for the most evasive behavior.
             turtle.bgcolor(255, 200, 200)
             random_number = random.randint(1, 5)
             if random_number == 1:
                 p2.rotate_right()
             elif random_number == 2:
                 p1.rotate_left()
+        # If a collision is projected.
         elif len(peril_movements) > 0:
-            # mid-tier (slightly) evasive behavior
+            # Placeholder code for mid-tier (slightly) evasive behavior.
             turtle.bgcolor(255, 200, 100)
             random_number = random.randint(1, 12)
             if random_number == 1:
