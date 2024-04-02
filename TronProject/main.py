@@ -162,7 +162,7 @@ def draw(center_turtle):
             if random_number == 1:
                 p2.rotate_right()
             elif random_number == 2:
-                p1.rotate_left()
+                p2.rotate_left()
         # If a collision is projected.
         elif len(peril_movements) > 0:
             # Placeholder code for mid-tier (slightly) evasive behavior.
@@ -171,7 +171,7 @@ def draw(center_turtle):
             if random_number == 1:
                 p2.rotate_right()
             elif random_number == 2:
-                p1.rotate_left()
+                p2.rotate_left()
         else:
             turtle.bgcolor('white')
 
