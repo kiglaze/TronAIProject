@@ -120,7 +120,7 @@ class Condition(Node):
         return self.condition()
 
 # Returns True if within a certain range of enemy pixel.
-def hover_near_closest_enemy_pixel(player:Player, opponent_player:Player):
+def face_closest_enemy_pixel(player:Player, opponent_player:Player):
     direction_vect_closest_enemy_pixel = get_closest_enemy_pixel_direction_vect(player, opponent_player)
     ## -3, -4 => 0, -1
     ## -5, 2 => -1, 0
@@ -308,7 +308,7 @@ def draw(center_turtle):
             Sequence([
                 Condition(partial(p2.is_far_from_opponent, p1, 5)),
                 Condition(partial(true_with_probability, 0.2)),
-                Action(partial(hover_near_closest_enemy_pixel, p2, p1))
+                Action(partial(face_closest_enemy_pixel, p2, p1))
             ])
         ])
 
