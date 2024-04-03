@@ -14,8 +14,14 @@ import tkinter.simpledialog as simpledialog
 import math
 from functools import partial
 import random
+from enum import Enum
 
 MOVEMENT_SIZE = 4
+
+class Behavior(Enum):
+    AGGRESSIVE = 1
+    EVASIVE = 2
+    RANDOM = 3
 
 class Player:
     def __init__(self, position, aim, color, key_left, key_right, is_ai=False):
@@ -26,7 +32,14 @@ class Player:
         self.color = color
         self.key_left = key_left
         self.key_right = key_right
+        self.behavior = Behavior.RANDOM
         self.is_ai = is_ai
+
+    def set_behavior(self, behavior_enum: Behavior):
+        self.behavior = behavior_enum
+
+    def get_behavior(self) -> Behavior:
+        return self.behavior
 
     def get_position(self):
         return self.position
@@ -350,6 +363,7 @@ def draw(center_turtle):
 
         # AGGRESSIVE BEHAVIOR TREE
         # Constructing the behavior tree
+        p2.set_behavior(Behavior.AGGRESSIVE)
 
         #root = Selector([
         #    Sequence([
@@ -358,20 +372,20 @@ def draw(center_turtle):
         #    ]),
         #    Action(search_for_enemy)
         #])
-
-        root = Selector([
-            Sequence([
-                Condition(partial(p2.is_closer_to_projected_pixel, p1, 40 * MOVEMENT_SIZE)),
-                Action(partial(p2.face_closest_projected_enemy_pixel, p1, 40 * MOVEMENT_SIZE))
-            ]),
-            Sequence([
-                Condition(partial(p2.is_far_from_opponent, p1, 25)),
-                Condition(partial(true_with_probability, 0.70)),
-                Action(partial(p2.face_closest_enemy_pixel, p1))
+        if p2.get_behavior() == Behavior.AGGRESSIVE:
+            root = Selector([
+                Sequence([
+                    Condition(partial(p2.is_closer_to_projected_pixel, p1, 40 * MOVEMENT_SIZE)),
+                    Action(partial(p2.face_closest_projected_enemy_pixel, p1, 40 * MOVEMENT_SIZE))
+                ]),
+                Sequence([
+                    Condition(partial(p2.is_far_from_opponent, p1, 25)),
+                    Condition(partial(true_with_probability, 0.70)),
+                    Action(partial(p2.face_closest_enemy_pixel, p1))
+                ])
             ])
-        ])
 
-        root.run()
+            root.run()
 
 
     turtle.ontimer(lambda: draw(center_turtle), 100)
