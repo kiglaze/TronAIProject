@@ -174,7 +174,6 @@ def Dijkstra(board, position, occupied):
             # Add it to the visited position
             x_position = int(vector.x / 4) + 50
             y_position = int(vector.y / 4) + 50
-            # visited[(x_position, y_position)] = 1
             board[(x_position, y_position)] = -1
 
     # Put in the priority queue the distance and position pair where we begin the Dijkstra's algorithm
@@ -221,15 +220,18 @@ def create_new_board(p1board, p2board):
     x, y = p1board.shape
     for i in range(x):
         for j in range(y):
-            if p1board[i, j] <= p2board[i, j]:
-               new_board[i, j] = 1
-            elif p1board[i, j] > p2board[i, j]:
-                new_board[i, j] = 2
+            if p1board[i, j] != -1 and p2board[i, j] != -1:
+                if p1board[i, j] <= p2board[i, j]:
+                    new_board[i, j] = 1
+                elif p1board[i, j] > p2board[i, j]:
+                    new_board[i, j] = 2
     # print(new_board)
     return new_board
 
 def count_num_positions(new_board):
     x, y = new_board.shape
+    print("x: " + str(x))
+    print("y: " + str(y))
     p1_count = 0
     p2_count = 0
     for i in range(x):
@@ -238,11 +240,13 @@ def count_num_positions(new_board):
                 p1_count = p1_count + 1
             if new_board[i, j] == 2:
                 p2_count = p2_count + 1
+    print("p1_count: " + str(p1_count))
+    print("p2_count: " + str(p2_count))
     return [p1_count, p2_count]
 
 def calculate_score(position_count):
     p1_count, p2_count = position_count
-    # return p2_count * -1000
+    # return p2_count * 1000
     return p2_count * 10000000 + p1_count * -100000
 
 def calculate_sum_shortest_distance(player_num, player_board, new_board):
