@@ -36,7 +36,11 @@ class Player:
 
     def set_aim(self, aim_vect):
         desired_vect = self.get_cardinal_unit_direction_vector(aim_vect)
-        if self.get_aim() != desired_vect and self.get_aim() * -1 != desired_vect:
+        is_desired_val = (((abs(aim_vect.x) == MOVEMENT_SIZE or abs(aim_vect.y) == MOVEMENT_SIZE)
+                          and not (abs(aim_vect.x) == MOVEMENT_SIZE and abs(aim_vect.y) == MOVEMENT_SIZE))
+                          and (aim_vect.x == 0 or aim_vect.y == 0) and not (aim_vect.x == 0 and aim_vect.y == 0))
+
+        if is_desired_val and self.get_aim() != desired_vect and self.get_aim() * -1 != desired_vect:
             self.aim = aim_vect
 
     def rotate_left(self):
@@ -91,11 +95,14 @@ class Player:
         return distance
 
     def get_closest_enemy_pixel_direction_vect(self, opponent_player):
-        return direction_vector(self.get_position(), self.get_closest_enemy_pixel_position(self, opponent_player))
+        result = direction_vector(self.get_position(), self.get_closest_enemy_pixel_position(opponent_player))
+        if result.x == 0 and result.y == 0:
+            print(result)
+        return result
 
     def get_closest_enemy_pixel_position(self, opponent_player):
-        player_pos = self.get_position()
         opponent_body = opponent_player.get_body()
+        player_pos = self.get_position()
         closest_pixel = None
         enemy_min_distance = float('inf')
         for pixel_pos in opponent_body:
@@ -105,6 +112,21 @@ class Player:
                 closest_pixel = pixel_pos
         return closest_pixel
 
+    def get_closest_opponent_projected_pixel(self, opponent_player, projected_pixels_count: int):
+        opponent_projected_movements = opponent_player.get_projected_movements(projected_pixels_count)
+        player_pos = self.get_position()
+        closest_pixel = None
+        enemy_min_distance = float('inf')
+        for pixel_pos in opponent_projected_movements:
+            pixel_dist = manhattan_distance(player_pos, pixel_pos)
+            if pixel_dist < enemy_min_distance:
+                enemy_min_distance = pixel_dist
+                closest_pixel = pixel_pos
+        return closest_pixel
+
+    def get_closest_projected_enemy_pixel_dir_vect(self, opponent_player, projected_pixels_count: int):
+        return direction_vector(player.get_position(), self.get_closest_opponent_projected_pixel(opponent_player, projected_pixels_count))
+
     # Returns True if within a certain range of enemy pixel.
     def face_closest_enemy_pixel(self, opponent_player):
         direction_vect_closest_enemy_pixel = self.get_closest_enemy_pixel_direction_vect(opponent_player)
@@ -112,23 +134,41 @@ class Player:
         ## -5, 2 => -1, 0
         ## 7, -5 => 1, 0
         ## 9, 15 => 0, 1
-        desired_direction_unit_vect = self.get_cardinal_unit_direction_vector(direction_vect_closest_enemy_pixel)
-        print(desired_direction_unit_vect)
-        player.set_aim(desired_direction_unit_vect)
-        return True
+        if direction_vect_closest_enemy_pixel.x == 0 and direction_vect_closest_enemy_pixel.y == 0:
+            return False
+        else:
+            desired_direction_unit_vect = self.get_cardinal_unit_direction_vector(direction_vect_closest_enemy_pixel)
+            player.set_aim(desired_direction_unit_vect)
+            print(desired_direction_unit_vect)
+            return True
 
-    def get_closest_enemy_pixel_direction_vect(self, opponent_player):
-        return direction_vector(player.get_position(), player.get_closest_enemy_pixel_position(opponent_player))
+    def is_closer_to_projected_pixel(self, opponent_player, projected_pixels_count: int):
+        target_pixel = self.get_closest_opponent_projected_pixel(opponent_player, projected_pixels_count)
+        player_distance = self.manhattan_distance(self.get_position(), target_pixel)
+        opponent_distance = self.manhattan_distance(opponent_player.get_position(), target_pixel)
+        return player_distance < opponent_distance
+
+    def face_closest_projected_enemy_pixel(self, opponent_player, projected_pixels_count: int):
+        direction_vect_closest_projected_enemy_pixel = self.get_closest_projected_enemy_pixel_dir_vect(opponent_player, projected_pixels_count)
+        desired_direction_unit_vect = self.get_cardinal_unit_direction_vector(direction_vect_closest_projected_enemy_pixel)
+        print(desired_direction_unit_vect)
+        if desired_direction_unit_vect.x == 0 and desired_direction_unit_vect.y == 0:
+            return False
+        else:
+            player.set_aim(desired_direction_unit_vect)
+            return True
 
     def get_cardinal_unit_direction_vector(self, input_direction_vector):
         result_x = 0
         result_y = 0
         if abs(input_direction_vector.x) > abs(input_direction_vector.y):
-            result_x = (input_direction_vector.x / abs(input_direction_vector.x))
+            result_x = (input_direction_vector.x / abs(input_direction_vector.x)) if input_direction_vector.x != 0 else 0
             result_y = 0
         else:
             result_x = 0
-            result_y = (input_direction_vector.y / abs(input_direction_vector.y))
+            result_y = (input_direction_vector.y / abs(input_direction_vector.y)) if input_direction_vector.y != 0 else 0
+        if result_x == 0 and result_y == 0:
+            print(result_x, result_y)
         return vector(result_x * MOVEMENT_SIZE, result_y * MOVEMENT_SIZE)
 
     def get_closest_enemy_pixel_distance(self, opponent_player):
@@ -178,8 +218,6 @@ class Condition(Node):
     def run(self):
         return self.condition()
 
-
-
 # Example usage:
 def is_enemy_visible():
     # Example condition function
@@ -195,10 +233,6 @@ def search_for_enemy():
     print("Searching for the enemy.")
     return True
 
-
-
-
-
 def direction_vector(pixel1, pixel2):
     x1, y1 = pixel1
     x2, y2 = pixel2
@@ -208,12 +242,7 @@ def direction_vector(pixel1, pixel2):
 
     return vector(dx, dy)
 
-
-
 #### END of Behavior Tree
-
-
-
 def ask_to_play_ai():
     """Asks the player if they are ready to play."""
     # This uses the underlying Tkinter root window to ask for user input.
@@ -332,7 +361,11 @@ def draw(center_turtle):
 
         root = Selector([
             Sequence([
-                Condition(partial(p2.is_far_from_opponent, p1, 15)),
+                Condition(partial(p2.is_closer_to_projected_pixel, p1, 40 * MOVEMENT_SIZE)),
+                Action(partial(p2.face_closest_projected_enemy_pixel, p1, 40 * MOVEMENT_SIZE))
+            ]),
+            Sequence([
+                Condition(partial(p2.is_far_from_opponent, p1, 25)),
                 Condition(partial(true_with_probability, 0.70)),
                 Action(partial(p2.face_closest_enemy_pixel, p1))
             ])
