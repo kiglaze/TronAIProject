@@ -350,15 +350,9 @@ def draw(center_turtle):
             print(new_board)
             position_count = count_num_positions(new_board)
             score = calculate_score(position_count)
-            # score = 0
-            # score += calculate_sum_shortest_distance(2, p2_board, new_board) * -1
-            score += calculate_sum_shortest_distance(2, p2_board, new_board)
+            score += calculate_sum_shortest_distance(1, p1_board, new_board)
             print(score)
             neighbor_scores.append((score, neighbor))
-        
-        # print()
-        # print()
-        # print()
         
         if neighbor_scores:
             best_neighbor = sorted(neighbor_scores, key=lambda x: x[0], reverse=True)[0]
