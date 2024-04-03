@@ -35,7 +35,7 @@ class Player:
         return self.aim
 
     def set_aim(self, aim_vect):
-        desired_vect = get_cardinal_unit_direction_vector(aim_vect)
+        desired_vect = self.get_cardinal_unit_direction_vector(aim_vect)
         if self.get_aim() != desired_vect and self.get_aim() * -1 != desired_vect:
             self.aim = aim_vect
 
@@ -73,7 +73,66 @@ class Player:
         self.body.add(head_val)
 
     def is_far_from_opponent(self, opponent_player, threshold: int):
-        return get_closest_enemy_pixel_distance(opponent_player, self) > threshold * MOVEMENT_SIZE
+        return self.get_closest_enemy_pixel_distance(opponent_player) > threshold * MOVEMENT_SIZE
+
+    def direction_vector(self, pixel1, pixel2):
+        x1, y1 = pixel1
+        x2, y2 = pixel2
+
+        dx = x2 - x1
+        dy = y2 - y1
+
+        return vector(dx, dy)
+
+    def manhattan_distance(self, point1, point2):
+        x1, y1 = point1
+        x2, y2 = point2
+        distance = abs(x2 - x1) + abs(y2 - y1)
+        return distance
+
+    def get_closest_enemy_pixel_direction_vect(self, opponent_player):
+        return direction_vector(self.get_position(), self.get_closest_enemy_pixel_position(self, opponent_player))
+
+    def get_closest_enemy_pixel_position(self, opponent_player):
+        player_pos = self.get_position()
+        opponent_body = opponent_player.get_body()
+        closest_pixel = None
+        enemy_min_distance = float('inf')
+        for pixel_pos in opponent_body:
+            pixel_dist = manhattan_distance(player_pos, pixel_pos)
+            if pixel_dist < enemy_min_distance:
+                enemy_min_distance = pixel_dist
+                closest_pixel = pixel_pos
+        return closest_pixel
+
+    # Returns True if within a certain range of enemy pixel.
+    def face_closest_enemy_pixel(self, opponent_player):
+        direction_vect_closest_enemy_pixel = self.get_closest_enemy_pixel_direction_vect(opponent_player)
+        ## -3, -4 => 0, -1
+        ## -5, 2 => -1, 0
+        ## 7, -5 => 1, 0
+        ## 9, 15 => 0, 1
+        desired_direction_unit_vect = self.get_cardinal_unit_direction_vector(direction_vect_closest_enemy_pixel)
+        print(desired_direction_unit_vect)
+        player.set_aim(desired_direction_unit_vect)
+        return True
+
+    def get_closest_enemy_pixel_direction_vect(self, opponent_player):
+        return direction_vector(player.get_position(), player.get_closest_enemy_pixel_position(opponent_player))
+
+    def get_cardinal_unit_direction_vector(self, input_direction_vector):
+        result_x = 0
+        result_y = 0
+        if abs(input_direction_vector.x) > abs(input_direction_vector.y):
+            result_x = (input_direction_vector.x / abs(input_direction_vector.x))
+            result_y = 0
+        else:
+            result_x = 0
+            result_y = (input_direction_vector.y / abs(input_direction_vector.y))
+        return vector(result_x * MOVEMENT_SIZE, result_y * MOVEMENT_SIZE)
+
+    def get_closest_enemy_pixel_distance(self, opponent_player):
+        return manhattan_distance(player.get_position(), player.get_closest_enemy_pixel_position(opponent_player))
 
 #### START of Behavior Tree
 class Node:
@@ -119,17 +178,7 @@ class Condition(Node):
     def run(self):
         return self.condition()
 
-# Returns True if within a certain range of enemy pixel.
-def face_closest_enemy_pixel(player:Player, opponent_player:Player):
-    direction_vect_closest_enemy_pixel = get_closest_enemy_pixel_direction_vect(player, opponent_player)
-    ## -3, -4 => 0, -1
-    ## -5, 2 => -1, 0
-    ## 7, -5 => 1, 0
-    ## 9, 15 => 0, 1
-    desired_direction_unit_vect = get_cardinal_unit_direction_vector(direction_vect_closest_enemy_pixel)
-    print(desired_direction_unit_vect)
-    player.set_aim(desired_direction_unit_vect)
-    return True
+
 
 # Example usage:
 def is_enemy_visible():
@@ -146,20 +195,9 @@ def search_for_enemy():
     print("Searching for the enemy.")
     return True
 
-def get_closest_enemy_pixel_position(player: Player, opponent_player: Player):
-    player_pos = player.get_position()
-    opponent_body = opponent_player.get_body()
-    closest_pixel = None
-    enemy_min_distance = float('inf')
-    for pixel_pos in opponent_body:
-        pixel_dist = manhattan_distance(player_pos, pixel_pos)
-        if pixel_dist < enemy_min_distance:
-            enemy_min_distance = pixel_dist
-            closest_pixel = pixel_pos
-    return closest_pixel
 
-def get_closest_enemy_pixel_distance(player: Player, opponent_player: Player):
-    return manhattan_distance(player.get_position(), get_closest_enemy_pixel_position(player, opponent_player))
+
+
 
 def direction_vector(pixel1, pixel2):
     x1, y1 = pixel1
@@ -170,19 +208,7 @@ def direction_vector(pixel1, pixel2):
 
     return vector(dx, dy)
 
-def get_closest_enemy_pixel_direction_vect(player: Player, opponent_player: Player):
-    return direction_vector(player.get_position(), get_closest_enemy_pixel_position(player, opponent_player))
 
-def get_cardinal_unit_direction_vector(input_direction_vector):
-    result_x = 0
-    result_y = 0
-    if (abs(input_direction_vector.x) > abs(input_direction_vector.y)):
-        result_x = ((input_direction_vector.x) / abs(input_direction_vector.x))
-        result_y = 0
-    else:
-        result_x = 0
-        result_y = ((input_direction_vector.y) / abs(input_direction_vector.y))
-    return vector(result_x * MOVEMENT_SIZE, result_y * MOVEMENT_SIZE)
 
 #### END of Behavior Tree
 
@@ -238,7 +264,7 @@ def true_with_probability(probability: float):
     # Generate a random float between 0.0 and 1.0
     probability_value = random.random()
     # Return True if the generated number is less than 0.2
-    return probability_value < probability
+    return probability_value <= probability
 
 def draw(center_turtle):
     """Advance players and draw game."""
@@ -306,9 +332,9 @@ def draw(center_turtle):
 
         root = Selector([
             Sequence([
-                Condition(partial(p2.is_far_from_opponent, p1, 5)),
-                Condition(partial(true_with_probability, 0.2)),
-                Action(partial(face_closest_enemy_pixel, p2, p1))
+                Condition(partial(p2.is_far_from_opponent, p1, 15)),
+                Condition(partial(true_with_probability, 0.70)),
+                Action(partial(p2.face_closest_enemy_pixel, p1))
             ])
         ])
 
