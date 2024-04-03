@@ -243,7 +243,7 @@ def count_num_positions(new_board):
 def calculate_score(position_count):
     p1_count, p2_count = position_count
     # return p2_count * -1000
-    return p2_count * 1000 + p1_count * -10
+    return p2_count * 10000000 + p1_count * -100000
 
 def calculate_sum_shortest_distance(player_num, player_board, new_board):
     x, y = player_board.shape
@@ -347,6 +347,7 @@ def draw(center_turtle):
             position_count = count_num_positions(new_board)
             score = calculate_score(position_count)
             # score = 0
+            # score += calculate_sum_shortest_distance(2, p2_board, new_board) * -1
             score += calculate_sum_shortest_distance(2, p2_board, new_board)
             print(score)
             neighbor_scores.append((score, neighbor))
