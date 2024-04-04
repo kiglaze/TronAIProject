@@ -155,6 +155,44 @@ class Player:
             print(desired_direction_unit_vect)
             return True
 
+    def get_random_turn_direction(self, exclude_direction_vectors=None):
+        current_direction = self.get_aim()
+        from_direction = -1 * self.get_aim()
+        exclude_direction_vectors_all = [current_direction, from_direction]
+        if exclude_direction_vectors is not None:
+            for exclude_direction_vector in exclude_direction_vectors:
+                exclude_direction_vectors_all.append(exclude_direction_vector)
+        all_possible_directions = [vector(0, -MOVEMENT_SIZE), vector(0, MOVEMENT_SIZE), vector(-MOVEMENT_SIZE, 0), vector(MOVEMENT_SIZE, 0)]
+        for exclude_direction in exclude_direction_vectors_all:
+            if exclude_direction in all_possible_directions:
+                all_possible_directions.remove(exclude_direction)
+        if len(all_possible_directions) == 0:
+            return None
+        else:
+            return random.choice(all_possible_directions)
+    def face_away_from_closest_enemy_pixel(self, opponent_player):
+        direction_vect_closest_enemy_pixel = self.get_closest_enemy_pixel_direction_vect(opponent_player)
+        ## -3, -4 => 0, -1
+        ## -5, 2 => -1, 0
+        ## 7, -5 => 1, 0
+        ## 9, 15 => 0, 1
+        if direction_vect_closest_enemy_pixel.x == 0 and direction_vect_closest_enemy_pixel.y == 0:
+            return False
+        else:
+            desired_direction_unit_vect = self.get_cardinal_unit_direction_vector(direction_vect_closest_enemy_pixel)
+            random_turn_direction_vect = self.get_random_turn_direction([desired_direction_unit_vect])
+            player.set_aim(random_turn_direction_vect)
+            print(desired_direction_unit_vect)
+            return True
+
+    def is_facing_closest_opponent_pixel(self, opponent_player):
+        direction_vect_closest_enemy_pixel = self.get_closest_enemy_pixel_direction_vect(opponent_player)
+        if direction_vect_closest_enemy_pixel.x == 0 and direction_vect_closest_enemy_pixel.y == 0:
+            return False
+        else:
+            desired_direction_unit_vect = self.get_cardinal_unit_direction_vector(direction_vect_closest_enemy_pixel)
+            return self.get_aim() == desired_direction_unit_vect
+
     def is_closer_to_projected_pixel(self, opponent_player, projected_pixels_count: int):
         target_pixel = self.get_closest_opponent_projected_pixel(opponent_player, projected_pixels_count)
         player_distance = self.manhattan_distance(self.get_position(), target_pixel)
@@ -175,11 +213,11 @@ class Player:
         result_x = 0
         result_y = 0
         if abs(input_direction_vector.x) > abs(input_direction_vector.y):
-            result_x = (input_direction_vector.x / abs(input_direction_vector.x)) if input_direction_vector.x != 0 else 0
+            result_x = int((input_direction_vector.x / abs(input_direction_vector.x))) if input_direction_vector.x != 0 else 0
             result_y = 0
         else:
             result_x = 0
-            result_y = (input_direction_vector.y / abs(input_direction_vector.y)) if input_direction_vector.y != 0 else 0
+            result_y = int((input_direction_vector.y / abs(input_direction_vector.y))) if input_direction_vector.y != 0 else 0
         if result_x == 0 and result_y == 0:
             print(result_x, result_y)
         return vector(result_x * MOVEMENT_SIZE, result_y * MOVEMENT_SIZE)
@@ -354,16 +392,20 @@ def draw(center_turtle):
         if head_manhattan_distance < (10 * MOVEMENT_SIZE):
             # Placeholder for the most evasive behavior.
             turtle.bgcolor(255, 200, 200)
+            p2.set_behavior(Behavior.EVASIVE)
         # If a collision is projected.
         elif len(peril_movements) > 0:
             # Placeholder code for mid-tier (slightly) evasive behavior.
             turtle.bgcolor(255, 200, 100)
+            p2.set_behavior(Behavior.EVASIVE)
         else:
             turtle.bgcolor('white')
+            p2.set_behavior(Behavior.AGGRESSIVE)
 
         # AGGRESSIVE BEHAVIOR TREE
         # Constructing the behavior tree
-        p2.set_behavior(Behavior.AGGRESSIVE)
+        #p2.set_behavior(Behavior.AGGRESSIVE)
+        #p2.set_behavior(Behavior.EVASIVE)
 
         #root = Selector([
         #    Sequence([
@@ -372,6 +414,7 @@ def draw(center_turtle):
         #    ]),
         #    Action(search_for_enemy)
         #])
+
         if p2.get_behavior() == Behavior.AGGRESSIVE:
             root = Selector([
                 Sequence([
@@ -382,6 +425,17 @@ def draw(center_turtle):
                     Condition(partial(p2.is_far_from_opponent, p1, 25)),
                     Condition(partial(true_with_probability, 0.70)),
                     Action(partial(p2.face_closest_enemy_pixel, p1))
+                ])
+            ])
+
+            root.run()
+        elif p2.get_behavior() == Behavior.EVASIVE:
+            root = Selector([
+                Sequence([
+                    # Need to avoid collision.
+                    Condition(partial(p2.is_facing_closest_opponent_pixel, p1)),
+                    Condition(partial(true_with_probability, 0.70)),
+                    Action(partial(p2.face_away_from_closest_enemy_pixel, p1))
                 ])
             ])
 
