@@ -152,19 +152,13 @@ def Dijkstra(board, position, occupied):
     # Set up a priority queue to use in Dijkstra
     queue = PriorityQueue()
 
-    # print("position: " + str(position))
-
     # Get how x and y lengths of the 2D array that represents the board
     # Both x_max and y_max should be 100
     x_max, y_max = board.shape
 
-    print(x_max)
-    print(y_max)
-
     # Create a new 2D array that has the same shape as the board and mark every location with 0s
     # 0 means that we have not visited there yet
     visited = np.zeros(board.shape)
-    # print(visited)
 
     # For each position that is occupied, mark it with 1
     # 1 means that we visited that location
@@ -208,11 +202,10 @@ def Dijkstra(board, position, occupied):
 
                     # Update the distance for that neighboring position
                     board[x1, y1] = distance + 1
-                    # print("board[" + str(x1) + ", " + str(y1) + "] = " + str(board[x1, y1]))
 
                     # Put into the priority queue the neighboring position
                     queue.put((distance + 1, (x1, y1)))
-    # print(board)
+
     return board
 
 def create_new_board(p1board, p2board):
@@ -220,18 +213,15 @@ def create_new_board(p1board, p2board):
     x, y = p1board.shape
     for i in range(x):
         for j in range(y):
-            if p1board[i, j] != -1 and p2board[i, j] != -1:
+            if p1board[i, j] != -1 and p2board[i, j] != -1 and not (p1board[i, j] == np.inf and p2board[i, j] == np.inf):
                 if p1board[i, j] <= p2board[i, j]:
                     new_board[i, j] = 1
                 elif p1board[i, j] > p2board[i, j]:
                     new_board[i, j] = 2
-    # print(new_board)
     return new_board
 
 def count_num_positions(new_board):
     x, y = new_board.shape
-    print("x: " + str(x))
-    print("y: " + str(y))
     p1_count = 0
     p2_count = 0
     for i in range(x):
@@ -246,7 +236,6 @@ def count_num_positions(new_board):
 
 def calculate_score(position_count):
     p1_count, p2_count = position_count
-    # return p2_count * 1000
     return p2_count * 10000000 + p1_count * -100000
 
 def calculate_sum_shortest_distance(player_num, player_board, new_board):
@@ -334,7 +323,8 @@ def draw(center_turtle):
         p2_board = np.matrix(np.ones((SIZE,SIZE)) * np.inf)
 
         occupied = p1.get_body().union(p2.get_body())
-        # occupied = p1.get_body()
+        occupiedCopy = occupied.copy()
+        occupiedForAI = occupiedCopy.union({p2.get_position()})
 
         neighbor_scores = []
 
@@ -344,18 +334,18 @@ def draw(center_turtle):
         print(p1_board)
 
         for neighbor in get_neighbors(p2.get_position()):
-            p2_board = Dijkstra(p2_board, neighbor, occupied)
-            print(p2_board)
+            p2_board = Dijkstra(p2_board, neighbor, occupiedForAI)
             new_board = create_new_board(p1_board, p2_board)
-            print(new_board)
             position_count = count_num_positions(new_board)
-            score = calculate_score(position_count)
-            score += calculate_sum_shortest_distance(1, p1_board, new_board)
+            score = calculate_sum_shortest_distance(2, p2_board, new_board)
+            # score = calculate_score(position_count)
+            # score += calculate_sum_shortest_distance(1, p1_board, new_board)
             print(score)
             neighbor_scores.append((score, neighbor))
         
         if neighbor_scores:
             best_neighbor = sorted(neighbor_scores, key=lambda x: x[0], reverse=True)[0]
+            print(neighbor_scores)
             direction = choose_direction(p2.get_position(), best_neighbor[-1])
             turn_degree = turn_or_not(direction, p2.aim)
             print(turn_degree)
@@ -469,4 +459,3 @@ if __name__ == '__main__':
     draw(center_turtle)
 
     turtle.done()
-
