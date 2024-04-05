@@ -438,7 +438,30 @@ def draw(center_turtle):
                     Action(partial(p2.face_away_from_closest_enemy_pixel, p1))
                 ])
             ])
+            root.run()
 
+        elif p2.get_behavior() == Behavior.RANDOM:
+            root = Selector([
+                Sequence([
+                    Condition(partial(p2.is_closer_to_projected_pixel, p1, 40 * MOVEMENT_SIZE)),
+                    Action(partial(p2.face_closest_projected_enemy_pixel, p1, 40 * MOVEMENT_SIZE))
+                ]),
+                Sequence([
+                    # Going straight ahead
+                    Condition(partial(true_with_probability, 0.90)),
+                    Action(lambda: None)
+                ]),
+                Sequence([
+                    # Going straight ahead
+                    Condition(partial(true_with_probability, 0.05)),
+                    Action(partial(p2.rotate_left))
+                ]),
+                Sequence([
+                    # Going straight ahead
+                    Condition(partial(true_with_probability, 0.05)),
+                    Action(partial(p2.rotate_right))
+                ])
+            ])
             root.run()
 
 
@@ -480,4 +503,3 @@ if __name__ == '__main__':
     draw(center_turtle)
 
     turtle.done()
-
