@@ -23,6 +23,11 @@ class Behavior(Enum):
     EVASIVE = 2
     RANDOM = 3
 
+class AIType(Enum):
+    HUMAN = 0
+    TYPE_A = 1
+    TYPE_B = 2
+
 class Player:
     def __init__(self, position, aim, color, key_left, key_right, is_ai=False):
         self.position = position
@@ -42,6 +47,8 @@ class Player:
                 turtle_obj.bgcolor('pink')
             elif behavior_enum == Behavior.AGGRESSIVE:
                 turtle_obj.bgcolor('lightgreen')
+            elif behavior_enum == Behavior.RANDOM:
+                turtle_obj.bgcolor('yellow')
 
     def get_behavior(self) -> Behavior:
         return self.behavior
@@ -93,6 +100,24 @@ class Player:
 
     def add_to_body(self, head_val):
         self.body.add(head_val)
+
+    def get_body_com(self):
+        body_pixel_count = len(self.get_body())
+        body_x_sum = 0
+        body_y_sum = 0
+        for pixel in self.get_body():
+            body_x_sum += pixel.x
+            body_y_sum += pixel.y
+        body_x_avg = body_x_sum / body_pixel_count
+        body_y_avg = body_y_sum / body_pixel_count
+        return vector(body_x_avg, body_y_avg)
+
+    def get_cardinal_dir_vect_opponent_com(self, opponent_player):
+        direction_vect = self.direction_vector(self.get_position(), opponent_player.get_body_com())
+        return self.get_cardinal_unit_direction_vector(direction_vect)
+
+    def is_facing_opponent_com(self, opponent_player):
+        return self.get_aim() == self.get_cardinal_dir_vect_opponent_com(opponent_player)
 
     def is_far_from_opponent(self, opponent_player, threshold: int):
         return self.get_closest_enemy_pixel_distance(opponent_player) > threshold * MOVEMENT_SIZE
@@ -409,18 +434,29 @@ def draw(center_turtle):
 
     # DECISION TREE LOGIC HERE
     # background color changes indicate what behavior the AI should be performing
+    active_ai = AIType.TYPE_A
     if p2.is_ai:
-        # Construct the decision tree
-        decision_tree = DecisionNode(
-            decision_function=partial(p2.is_head_within_dist_opponent_head, p1, 10),
-            true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
-            false_node=DecisionNode(decision_function=partial(p2.is_crash_into_opponent_anticipated,p1, 20),
-                                    true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
-                                    false_node=Action(partial(p2.set_behavior, Behavior.AGGRESSIVE, turtle)))
-        )
-        # Execute the decision tree
-        outcome = decision_tree.run()
-
+        if active_ai == AIType.TYPE_A:
+            # Construct the decision tree, type A
+            decision_tree = DecisionNode(
+                decision_function=partial(p2.is_head_within_dist_opponent_head, p1, 10),
+                true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
+                false_node=DecisionNode(decision_function=partial(p2.is_crash_into_opponent_anticipated,p1, 20),
+                                        true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
+                                        false_node=DecisionNode(
+                                            decision_function=partial(p2.is_facing_opponent_com, p1),
+                                            true_node=Action(partial(p2.set_behavior, Behavior.RANDOM, turtle)),
+                                            false_node=Action(partial(p2.set_behavior, Behavior.AGGRESSIVE, turtle))
+                                        )
+                )
+            )
+            # Execute the decision tree
+            outcome = decision_tree.run()
+        elif active_ai == AIType.TYPE_B:
+            # Construct the decision tree, type B
+            #decision_tree = DecisionNode()
+            # Execute the decision tree
+            #outcome = decision_tree.run()
 
 
 
