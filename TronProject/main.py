@@ -263,6 +263,9 @@ class Player:
     def get_closest_enemy_pixel_distance(self, opponent_player):
         return manhattan_distance(player.get_position(), player.get_closest_enemy_pixel_position(opponent_player))
 
+    def is_longer_than(self, min_threshold: int):
+        return len(self.get_body()) > min_threshold
+
 #### START of Behavior Tree
 class Node:
     """Base class for all nodes."""
@@ -434,7 +437,7 @@ def draw(center_turtle):
 
     # DECISION TREE LOGIC HERE
     # background color changes indicate what behavior the AI should be performing
-    active_ai = AIType.TYPE_A
+    active_ai = AIType.TYPE_B
     if p2.is_ai:
         if active_ai == AIType.TYPE_A:
             # Construct the decision tree, type A
@@ -454,9 +457,31 @@ def draw(center_turtle):
             outcome = decision_tree.run()
         elif active_ai == AIType.TYPE_B:
             # Construct the decision tree, type B
-            #decision_tree = DecisionNode()
+            decision_tree = DecisionNode(decision_function=partial(p2.is_longer_than, 50),
+                                         true_node=DecisionNode(
+                                             decision_function=partial(p2.is_crash_into_opponent_anticipated, p1, 50),
+                                             true_node=DecisionNode(
+                                                 decision_function=partial(p2.is_crash_into_opponent_anticipated, p1,
+                                                                           50),
+                                                 true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
+                                                 false_node=Action(
+                                                     partial(p2.set_behavior, Behavior.AGGRESSIVE, turtle))
+                                                 ),
+                                             false_node=DecisionNode(
+                                                 decision_function=partial(p2.is_facing_opponent_com, p1),
+                                                 true_node=Action(partial(p2.set_behavior, Behavior.RANDOM, turtle)),
+                                                 false_node=Action(
+                                                     partial(p2.set_behavior, Behavior.AGGRESSIVE, turtle))
+                                             )
+                                             ),
+                                         false_node=DecisionNode(
+                                             decision_function=partial(p2.is_head_within_dist_opponent_head, p1, 30),
+                                             true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
+                                             false_node=Action(partial(p2.set_behavior, Behavior.RANDOM, turtle))
+                                             )
+                                         )
             # Execute the decision tree
-            #outcome = decision_tree.run()
+            outcome = decision_tree.run()
 
 
 
