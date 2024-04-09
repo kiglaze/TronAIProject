@@ -437,7 +437,7 @@ def draw(center_turtle):
 
     # DECISION TREE LOGIC HERE
     # background color changes indicate what behavior the AI should be performing
-    active_ai = AIType.TYPE_B
+    active_ai = AIType.TYPE_A
     if p2.is_ai:
         if active_ai == AIType.TYPE_A:
             # Construct the decision tree, type A
@@ -497,6 +497,8 @@ def draw(center_turtle):
         #    ]),
         #    Action(search_for_enemy)
         #])
+
+        #p2.set_behavior(Behavior.AGGRESSIVE)
 
         if p2.get_behavior() == Behavior.AGGRESSIVE:
             root = Selector([
