@@ -29,7 +29,7 @@ class AIType(Enum):
     TYPE_B = 2
 
 class Player:
-    def __init__(self, position, aim, color, key_left, key_right, is_ai=False):
+    def __init__(self, position, aim, color, key_left, key_right, ai_type=AIType.HUMAN):
         self.position = position
         #self.aim = vector(4 if color == 'red' else -4, 0)
         self.aim = aim
@@ -38,7 +38,7 @@ class Player:
         self.key_left = key_left
         self.key_right = key_right
         self.behavior = Behavior.RANDOM
-        self.is_ai = is_ai
+        self.ai_type = ai_type
 
     def set_behavior(self, behavior_enum: Behavior, turtle_obj=None):
         self.behavior = behavior_enum
@@ -266,6 +266,9 @@ class Player:
     def is_longer_than(self, min_threshold: int):
         return len(self.get_body()) > min_threshold
 
+    def is_ai(self):
+        return self.ai_type is not AIType.HUMAN
+
 #### START of Behavior Tree
 class Node:
     """Base class for all nodes."""
@@ -353,7 +356,16 @@ def ask_to_play_ai():
     """Asks the player if they are ready to play."""
     # This uses the underlying Tkinter root window to ask for user input.
     answer = simpledialog.askstring("AI/Human?", "Do you want to play an AI or a Human? (AI/Human)")
-    return answer.lower() == 'ai'
+    if answer.lower() == 'ai':
+        ai_type = simpledialog.askstring("AI Type?", "Would you like to fight against AI type A or B? (A/B)")
+        if ai_type.lower() == "a":
+            return AIType.TYPE_A
+        elif ai_type.lower() == "b":
+            return AIType.TYPE_B
+        else:
+            return AIType.TYPE_A
+    else:
+        return AIType.HUMAN
 
 def inside(head):
     """Return True if head inside screen."""
@@ -437,8 +449,8 @@ def draw(center_turtle):
 
     # DECISION TREE LOGIC HERE
     # background color changes indicate what behavior the AI should be performing
-    active_ai = AIType.TYPE_A
-    if p2.is_ai:
+    active_ai = p2.ai_type
+    if not active_ai.is_ai():
         if active_ai == AIType.TYPE_A:
             # Construct the decision tree, type A
             decision_tree = DecisionNode(
@@ -537,7 +549,7 @@ if __name__ == '__main__':
 
     p2xy = vector(100, 0)
     p2aim = vector(-1 * MOVEMENT_SIZE, 0)
-    p2 = Player(p2xy, p2aim, 'blue', 'j', 'l', is_ai=ask_to_play_ai())
+    p2 = Player(p2xy, p2aim, 'blue', 'j', 'l', ai_type=ask_to_play_ai())
     #p2body = set()
 
     players = [p1, p2]
@@ -550,7 +562,7 @@ if __name__ == '__main__':
     turtle.listen()
 
     for player in players:
-        if not player.is_ai:
+        if not player.is_ai():
             turtle.onkey(player.rotate_left, player.key_left)
             turtle.onkey(player.rotate_right, player.key_right)
 
