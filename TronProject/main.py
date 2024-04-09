@@ -176,7 +176,7 @@ class Player:
         return closest_pixel
 
     def get_closest_projected_enemy_pixel_dir_vect(self, opponent_player, projected_pixels_count: int):
-        return direction_vector(player.get_position(), self.get_closest_opponent_projected_pixel(opponent_player, projected_pixels_count))
+        return direction_vector(self.get_position(), self.get_closest_opponent_projected_pixel(opponent_player, projected_pixels_count))
 
     # Returns True if within a certain range of enemy pixel.
     def face_closest_enemy_pixel(self, opponent_player):
@@ -188,8 +188,11 @@ class Player:
         if direction_vect_closest_enemy_pixel.x == 0 and direction_vect_closest_enemy_pixel.y == 0:
             return False
         else:
+            previous_aim_vector = self.get_aim()
             desired_direction_unit_vect = self.get_cardinal_unit_direction_vector(direction_vect_closest_enemy_pixel)
-            player.set_aim(desired_direction_unit_vect)
+            self.set_aim(desired_direction_unit_vect)
+            if self.get_aim() is previous_aim_vector:
+                return False
             print(desired_direction_unit_vect)
             return True
 
@@ -217,10 +220,12 @@ class Player:
         if direction_vect_closest_enemy_pixel.x == 0 and direction_vect_closest_enemy_pixel.y == 0:
             return False
         else:
+            previous_aim_vect = self.get_aim()
             desired_direction_unit_vect = self.get_cardinal_unit_direction_vector(direction_vect_closest_enemy_pixel)
             random_turn_direction_vect = self.get_random_turn_direction([desired_direction_unit_vect])
-            player.set_aim(random_turn_direction_vect)
-            print(desired_direction_unit_vect)
+            self.set_aim(random_turn_direction_vect)
+            if previous_aim_vect is self.get_aim():
+                return False
             return True
 
     def is_facing_closest_opponent_pixel(self, opponent_player):
@@ -238,13 +243,15 @@ class Player:
         return player_distance < opponent_distance
 
     def face_closest_projected_enemy_pixel(self, opponent_player, projected_pixels_count: int):
+        previous_aim_vect = self.get_aim()
         direction_vect_closest_projected_enemy_pixel = self.get_closest_projected_enemy_pixel_dir_vect(opponent_player, projected_pixels_count)
         desired_direction_unit_vect = self.get_cardinal_unit_direction_vector(direction_vect_closest_projected_enemy_pixel)
-        print(desired_direction_unit_vect)
         if desired_direction_unit_vect.x == 0 and desired_direction_unit_vect.y == 0:
             return False
         else:
-            player.set_aim(desired_direction_unit_vect)
+            self.set_aim(desired_direction_unit_vect)
+            if previous_aim_vect is self.get_aim():
+                return False
             return True
 
     def get_cardinal_unit_direction_vector(self, input_direction_vector):
@@ -261,7 +268,7 @@ class Player:
         return vector(result_x * MOVEMENT_SIZE, result_y * MOVEMENT_SIZE)
 
     def get_closest_enemy_pixel_distance(self, opponent_player):
-        return manhattan_distance(player.get_position(), player.get_closest_enemy_pixel_position(opponent_player))
+        return manhattan_distance(self.get_position(), self.get_closest_enemy_pixel_position(opponent_player))
 
     def is_longer_than(self, min_threshold: int):
         return len(self.get_body()) > min_threshold
