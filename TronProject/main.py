@@ -352,18 +352,19 @@ def direction_vector(pixel1, pixel2):
     return vector(dx, dy)
 
 #### END of Behavior Tree
-def ask_to_play_ai():
+def ask_to_play_ai(dialog_text_ai_human, dialog_text_ai_type):
     """Asks the player if they are ready to play."""
     # This uses the underlying Tkinter root window to ask for user input.
-    answer = simpledialog.askstring("AI/Human?", "Do you want to play an AI or a Human? (AI/Human)")
+    answer = simpledialog.askstring("AI/Human?", dialog_text_ai_human)
     if answer.lower() == 'ai':
-        ai_type = simpledialog.askstring("AI Type?", "Would you like to fight against AI type A or B? (A/B)")
+        ai_type = simpledialog.askstring("AI Type?", dialog_text_ai_type)
         if ai_type.lower() == "a":
             return AIType.TYPE_A
         elif ai_type.lower() == "b":
             return AIType.TYPE_B
         else:
             return AIType.TYPE_A
+
     else:
         return AIType.HUMAN
 
@@ -449,9 +450,8 @@ def draw(center_turtle):
 
     # DECISION TREE LOGIC HERE
     # background color changes indicate what behavior the AI should be performing
-    active_ai = p2.ai_type
-    if not active_ai.is_ai():
-        if active_ai == AIType.TYPE_A:
+    if p2.is_ai():
+        if p2.ai_type == AIType.TYPE_A:
             # Construct the decision tree, type A
             decision_tree = DecisionNode(
                 decision_function=partial(p2.is_head_within_dist_opponent_head, p1, 10),
@@ -467,7 +467,7 @@ def draw(center_turtle):
             )
             # Execute the decision tree
             outcome = decision_tree.run()
-        elif active_ai == AIType.TYPE_B:
+        elif p2.ai_type == AIType.TYPE_B:
             # Construct the decision tree, type B
             decision_tree = DecisionNode(decision_function=partial(p2.is_longer_than, 50),
                                          true_node=DecisionNode(
@@ -549,7 +549,9 @@ if __name__ == '__main__':
 
     p2xy = vector(100, 0)
     p2aim = vector(-1 * MOVEMENT_SIZE, 0)
-    p2 = Player(p2xy, p2aim, 'blue', 'j', 'l', ai_type=ask_to_play_ai())
+    p2 = Player(p2xy, p2aim, 'blue', 'j', 'l',
+                ai_type=ask_to_play_ai("Do you want Player 2 to be an AI or a Human? (AI/Human)",
+                                       "Should Player 2 to be AI type A or B? (A/B)"))
     #p2body = set()
 
     players = [p1, p2]
