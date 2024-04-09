@@ -211,6 +211,14 @@ class Player:
             return None
         else:
             return random.choice(all_possible_directions)
+
+    def turn_random_direction(self):
+        previous_aim_vector = self.get_aim()
+        self.set_aim(self.get_random_turn_direction())
+        if previous_aim_vector is self.get_aim():
+            return False
+        return True
+
     def face_away_from_closest_enemy_pixel(self, opponent_player):
         direction_vect_closest_enemy_pixel = self.get_closest_enemy_pixel_direction_vect(opponent_player)
         ## -3, -4 => 0, -1
@@ -253,6 +261,11 @@ class Player:
             if previous_aim_vect is self.get_aim():
                 return False
             return True
+
+    def is_facing_opposite_enemy(self, opponent_player):
+        direction_closest_enemy_pixel = self.get_closest_enemy_pixel_direction_vect(opponent_player)
+        enemy_caridanl_direction_vect = self.get_cardinal_unit_direction_vector(direction_closest_enemy_pixel)
+        return self.get_aim() is (-1 * enemy_caridanl_direction_vect)
 
     def get_cardinal_unit_direction_vector(self, input_direction_vector):
         result_x = 0
@@ -529,6 +542,10 @@ def draw(center_turtle):
                     Condition(partial(p2.is_far_from_opponent, p1, 25)),
                     Condition(partial(true_with_probability, 0.70)),
                     Action(partial(p2.face_closest_enemy_pixel, p1))
+                ]),
+                Sequence([
+                    Condition(partial(p2.is_facing_opposite_enemy, p1)),
+                    Action(partial(p2.turn_random_direction))
                 ])
             ])
 
