@@ -39,6 +39,7 @@ class Player:
         self.key_right = key_right
         self.behavior = Behavior.RANDOM
         self.ai_type = ai_type
+        self.moves_since_turn_counter = 0
 
     def set_behavior(self, behavior_enum: Behavior, turtle_obj=None):
         self.behavior = behavior_enum
@@ -60,6 +61,7 @@ class Player:
         return self.aim
 
     def set_aim(self, aim_vect):
+        previous_aim = self.get_aim()
         desired_vect = self.get_cardinal_unit_direction_vector(aim_vect)
         is_desired_val = (((abs(aim_vect.x) == MOVEMENT_SIZE or abs(aim_vect.y) == MOVEMENT_SIZE)
                           and not (abs(aim_vect.x) == MOVEMENT_SIZE and abs(aim_vect.y) == MOVEMENT_SIZE))
@@ -67,12 +69,16 @@ class Player:
 
         if is_desired_val and self.get_aim() != desired_vect and self.get_aim() * -1 != desired_vect:
             self.aim = aim_vect
+        if self.get_aim() is not previous_aim:
+            self.moves_since_turn_counter = 0
 
     def rotate_left(self):
         self.aim.rotate(90)
+        self.moves_since_turn_counter = 0
 
     def rotate_right(self):
         self.aim.rotate(-90)
+        self.moves_since_turn_counter = 0
 
     def get_key_right(self):
         return self.key_right
@@ -90,6 +96,7 @@ class Player:
         next_position.y = (next_position.y + 200) % 400 - 200
         self.position = next_position
         self.body.add(self.position.copy())
+        self.moves_since_turn_counter = self.moves_since_turn_counter + 1
 
     def get_projected_movements(self, num_movements):
         set_projected = set()
@@ -213,6 +220,7 @@ class Player:
             return random.choice(all_possible_directions)
 
     def turn_random_direction(self):
+        print(self.moves_since_turn_counter)
         previous_aim_vector = self.get_aim()
         self.set_aim(self.get_random_turn_direction())
         if previous_aim_vector is self.get_aim():
@@ -288,6 +296,20 @@ class Player:
 
     def is_ai(self):
         return self.ai_type is not AIType.HUMAN
+
+    def is_inside_window(self, position_vector):
+        """Return True if head inside screen."""
+        return -200 < position_vector.x < 200 and -200 < position_vector.y < 200
+
+    def is_projected_to_hit_wall(self, num_movements):
+        projected_movements = self.get_projected_movements(num_movements)
+        for projected in projected_movements:
+            if not self.is_inside_window(projected):
+                return True
+        return False
+
+    def is_moves_since_turn_greater_than(self, threshold):
+        return self.moves_since_turn_counter > threshold
 
 #### START of Behavior Tree
 class Node:
@@ -545,6 +567,14 @@ def draw(center_turtle):
                 ]),
                 Sequence([
                     Condition(partial(p2.is_facing_opposite_enemy, p1)),
+                    Condition(partial(p2.is_moves_since_turn_greater_than, 20)),
+                    Condition(partial(true_with_probability, 0.80)),
+                    Action(partial(p2.turn_random_direction))
+                ]),
+                Sequence([
+                    Condition(partial(p2.is_projected_to_hit_wall, 6)),
+                    Condition(partial(p2.is_moves_since_turn_greater_than, 5)),
+                    Condition(partial(true_with_probability, 0.80)),
                     Action(partial(p2.turn_random_direction))
                 ])
             ])
