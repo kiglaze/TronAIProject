@@ -97,6 +97,7 @@ class Player:
         self.position = next_position
         self.body.add(self.position.copy())
         self.moves_since_turn_counter = self.moves_since_turn_counter + 1
+        print("MOVES: ", self.moves_since_turn_counter)
 
     def get_projected_movements(self, num_movements):
         set_projected = set()
@@ -187,20 +188,23 @@ class Player:
 
     # Returns True if within a certain range of enemy pixel.
     def face_closest_enemy_pixel(self, opponent_player):
+        print("face_closest_enemy_pixel")
         direction_vect_closest_enemy_pixel = self.get_closest_enemy_pixel_direction_vect(opponent_player)
         ## -3, -4 => 0, -1
         ## -5, 2 => -1, 0
         ## 7, -5 => 1, 0
         ## 9, 15 => 0, 1
         if direction_vect_closest_enemy_pixel.x == 0 and direction_vect_closest_enemy_pixel.y == 0:
+            print("face_closest_enemy_pixel FALSE")
             return False
         else:
             previous_aim_vector = self.get_aim()
             desired_direction_unit_vect = self.get_cardinal_unit_direction_vector(direction_vect_closest_enemy_pixel)
             self.set_aim(desired_direction_unit_vect)
             if self.get_aim() is previous_aim_vector:
+                print("face_closest_enemy_pixel FALSE")
                 return False
-            print(desired_direction_unit_vect)
+            print("face_closest_enemy_pixel TRUE")
             return True
 
     def get_random_turn_direction(self, exclude_direction_vectors=None):
@@ -220,6 +224,7 @@ class Player:
             return random.choice(all_possible_directions)
 
     def turn_random_direction(self):
+        print("turn_random_direction")
         print(self.moves_since_turn_counter)
         previous_aim_vector = self.get_aim()
         self.set_aim(self.get_random_turn_direction())
@@ -259,6 +264,7 @@ class Player:
         return player_distance < opponent_distance
 
     def face_closest_projected_enemy_pixel(self, opponent_player, projected_pixels_count: int):
+        print("face_closest_projected_enemy_pixel")
         previous_aim_vect = self.get_aim()
         direction_vect_closest_projected_enemy_pixel = self.get_closest_projected_enemy_pixel_dir_vect(opponent_player, projected_pixels_count)
         desired_direction_unit_vect = self.get_cardinal_unit_direction_vector(direction_vect_closest_projected_enemy_pixel)
@@ -562,18 +568,19 @@ def draw(center_turtle):
                 ]),
                 Sequence([
                     Condition(partial(p2.is_far_from_opponent, p1, 25)),
+                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(3, 6))),
                     Condition(partial(true_with_probability, 0.70)),
                     Action(partial(p2.face_closest_enemy_pixel, p1))
                 ]),
                 Sequence([
                     Condition(partial(p2.is_facing_opposite_enemy, p1)),
-                    Condition(partial(p2.is_moves_since_turn_greater_than, 20)),
+                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(15, 22))),
                     Condition(partial(true_with_probability, 0.80)),
                     Action(partial(p2.turn_random_direction))
                 ]),
                 Sequence([
                     Condition(partial(p2.is_projected_to_hit_wall, 6)),
-                    Condition(partial(p2.is_moves_since_turn_greater_than, 5)),
+                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(5, 10))),
                     Condition(partial(true_with_probability, 0.80)),
                     Action(partial(p2.turn_random_direction))
                 ])
