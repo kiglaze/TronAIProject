@@ -39,6 +39,7 @@ class Player:
         self.key_right = key_right
         self.behavior = Behavior.RANDOM
         self.ai_type = ai_type
+        self.moves_since_turn_counter = 0
 
     def set_behavior(self, behavior_enum: Behavior, turtle_obj=None):
         self.behavior = behavior_enum
@@ -60,6 +61,7 @@ class Player:
         return self.aim
 
     def set_aim(self, aim_vect):
+        previous_aim = self.get_aim()
         desired_vect = self.get_cardinal_unit_direction_vector(aim_vect)
         is_desired_val = (((abs(aim_vect.x) == MOVEMENT_SIZE or abs(aim_vect.y) == MOVEMENT_SIZE)
                           and not (abs(aim_vect.x) == MOVEMENT_SIZE and abs(aim_vect.y) == MOVEMENT_SIZE))
@@ -67,12 +69,16 @@ class Player:
 
         if is_desired_val and self.get_aim() != desired_vect and self.get_aim() * -1 != desired_vect:
             self.aim = aim_vect
+        if self.get_aim() is not previous_aim:
+            self.moves_since_turn_counter = 0
 
     def rotate_left(self):
         self.aim.rotate(90)
+        self.moves_since_turn_counter = 0
 
     def rotate_right(self):
         self.aim.rotate(-90)
+        self.moves_since_turn_counter = 0
 
     def get_key_right(self):
         return self.key_right
@@ -90,6 +96,8 @@ class Player:
         next_position.y = (next_position.y + 200) % 400 - 200
         self.position = next_position
         self.body.add(self.position.copy())
+        self.moves_since_turn_counter = self.moves_since_turn_counter + 1
+        print("MOVES: ", self.moves_since_turn_counter)
 
     def get_projected_movements(self, num_movements):
         set_projected = set()
@@ -180,20 +188,23 @@ class Player:
 
     # Returns True if within a certain range of enemy pixel.
     def face_closest_enemy_pixel(self, opponent_player):
+        print("face_closest_enemy_pixel")
         direction_vect_closest_enemy_pixel = self.get_closest_enemy_pixel_direction_vect(opponent_player)
         ## -3, -4 => 0, -1
         ## -5, 2 => -1, 0
         ## 7, -5 => 1, 0
         ## 9, 15 => 0, 1
         if direction_vect_closest_enemy_pixel.x == 0 and direction_vect_closest_enemy_pixel.y == 0:
+            print("face_closest_enemy_pixel FALSE")
             return False
         else:
             previous_aim_vector = self.get_aim()
             desired_direction_unit_vect = self.get_cardinal_unit_direction_vector(direction_vect_closest_enemy_pixel)
             self.set_aim(desired_direction_unit_vect)
             if self.get_aim() is previous_aim_vector:
+                print("face_closest_enemy_pixel FALSE")
                 return False
-            print(desired_direction_unit_vect)
+            print("face_closest_enemy_pixel TRUE")
             return True
 
     def get_random_turn_direction(self, exclude_direction_vectors=None):
@@ -211,6 +222,16 @@ class Player:
             return None
         else:
             return random.choice(all_possible_directions)
+
+    def turn_random_direction(self):
+        print("turn_random_direction")
+        print(self.moves_since_turn_counter)
+        previous_aim_vector = self.get_aim()
+        self.set_aim(self.get_random_turn_direction())
+        if previous_aim_vector is self.get_aim():
+            return False
+        return True
+
     def face_away_from_closest_enemy_pixel(self, opponent_player):
         direction_vect_closest_enemy_pixel = self.get_closest_enemy_pixel_direction_vect(opponent_player)
         ## -3, -4 => 0, -1
@@ -243,6 +264,7 @@ class Player:
         return player_distance < opponent_distance
 
     def face_closest_projected_enemy_pixel(self, opponent_player, projected_pixels_count: int):
+        print("face_closest_projected_enemy_pixel")
         previous_aim_vect = self.get_aim()
         direction_vect_closest_projected_enemy_pixel = self.get_closest_projected_enemy_pixel_dir_vect(opponent_player, projected_pixels_count)
         desired_direction_unit_vect = self.get_cardinal_unit_direction_vector(direction_vect_closest_projected_enemy_pixel)
@@ -253,6 +275,11 @@ class Player:
             if previous_aim_vect is self.get_aim():
                 return False
             return True
+
+    def is_facing_opposite_enemy(self, opponent_player):
+        direction_closest_enemy_pixel = self.get_closest_enemy_pixel_direction_vect(opponent_player)
+        enemy_caridanl_direction_vect = self.get_cardinal_unit_direction_vector(direction_closest_enemy_pixel)
+        return self.get_aim() is (-1 * enemy_caridanl_direction_vect)
 
     def get_cardinal_unit_direction_vector(self, input_direction_vector):
         result_x = 0
@@ -275,6 +302,20 @@ class Player:
 
     def is_ai(self):
         return self.ai_type is not AIType.HUMAN
+
+    def is_inside_window(self, position_vector):
+        """Return True if head inside screen."""
+        return -200 < position_vector.x < 200 and -200 < position_vector.y < 200
+
+    def is_projected_to_hit_wall(self, num_movements):
+        projected_movements = self.get_projected_movements(num_movements)
+        for projected in projected_movements:
+            if not self.is_inside_window(projected):
+                return True
+        return False
+
+    def is_moves_since_turn_greater_than(self, threshold):
+        return self.moves_since_turn_counter > threshold
 
 #### START of Behavior Tree
 class Node:
@@ -527,8 +568,21 @@ def draw(center_turtle):
                 ]),
                 Sequence([
                     Condition(partial(p2.is_far_from_opponent, p1, 25)),
+                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(3, 6))),
                     Condition(partial(true_with_probability, 0.70)),
                     Action(partial(p2.face_closest_enemy_pixel, p1))
+                ]),
+                Sequence([
+                    Condition(partial(p2.is_facing_opposite_enemy, p1)),
+                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(15, 22))),
+                    Condition(partial(true_with_probability, 0.80)),
+                    Action(partial(p2.turn_random_direction))
+                ]),
+                Sequence([
+                    Condition(partial(p2.is_projected_to_hit_wall, 6)),
+                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Condition(partial(true_with_probability, 0.80)),
+                    Action(partial(p2.turn_random_direction))
                 ])
             ])
 
