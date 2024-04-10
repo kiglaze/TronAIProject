@@ -98,7 +98,7 @@ class Player:
         next_position.x = (next_position.x + 200) % 400 - 200
         next_position.y = (next_position.y + 200) % 400 - 200
         self.position = next_position
-        self.body.add(self.position.copy())
+        # self.body.add(self.position.copy())
         self.moves_since_turn_counter = self.moves_since_turn_counter + 1
         print("MOVES: ", self.moves_since_turn_counter)
 
@@ -535,12 +535,11 @@ class Player:
             position_count = self.count_num_positions(new_board)
             # score = self.calculate_sum_shortest_distance(self_board, new_board)
             score = self.calculate_score(position_count)
-            # score += self.calculate_sum_shortest_distance(1, p1_board, new_board)
             print(score)
             neighbor_scores.append((score, neighbor))
         
         if neighbor_scores:
-            best_neighbor = sorted(neighbor_scores, key=lambda x: x[0], reverse=True)[0]
+            best_neighbor = sorted(neighbor_scores, key=lambda x: x[0], reverse=False)[0]
             print(neighbor_scores)
             direction = self.choose_direction(self.get_position(), best_neighbor[-1])
             turn_degree = self.turn_or_not(direction, self.aim)
@@ -707,9 +706,13 @@ def draw(center_turtle):
     p2.move()
     p2head = p2.get_position().copy()
 
-    p1_failure = not inside(p1head) or p1head in p2.get_body()
-    p2_failure = not inside(p2head) or p2head in p1.get_body()
-    if p1_failure and p2_failure:
+    # p1_failure = not inside(p1head) or p1head in p2.get_body()
+    # p2_failure = not inside(p2head) or p2head in p1.get_body()
+
+    p1_failure = not inside(p1head) or p1head in p2.get_body() or p1head in p1.get_body()
+    p2_failure = not inside(p2head) or p2head in p1.get_body() or p2head in p2.get_body()
+    
+    if p1_failure and p2_failure or p1head == p2head:
         print('TIE!')
         write_text("Game Over!\nTIE.", 0, 0, "center", 20, center_turtle)
         return
@@ -832,7 +835,7 @@ def draw(center_turtle):
                 ]),
                 Sequence([
                     # Need to avoid collision.
-                    Condition(partial(true_with_probability, 0.70)),
+                    # Condition(partial(true_with_probability, 0.70)),
                     Action(partial(p2.change_aim, p1))
                 ])
             ])
