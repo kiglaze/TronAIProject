@@ -27,6 +27,7 @@ class AIType(Enum):
     HUMAN = 0
     TYPE_A = 1
     TYPE_B = 2
+    TYPE_C = 3
 
 class Player:
     def __init__(self, position, aim, color, key_left, key_right, ai_type=AIType.HUMAN):
@@ -95,7 +96,6 @@ class Player:
         next_position.x = (next_position.x + 200) % 400 - 200
         next_position.y = (next_position.y + 200) % 400 - 200
         self.position = next_position
-        self.body.add(self.position.copy())
         self.moves_since_turn_counter = self.moves_since_turn_counter + 1
         print("MOVES: ", self.moves_since_turn_counter)
 
@@ -138,6 +138,31 @@ class Player:
         dy = y2 - y1
 
         return vector(dx, dy)
+
+    def will_turn_cause_collision(self, direction_vector, opponent_body):
+        # Simulate the movement after turning left or right
+        next_position = self.position + direction_vector
+        
+        # Check if the next position leads to a collision with walls or opponent's body
+        return not inside(next_position) or next_position in opponent_body
+
+    def is_left_turn_safe(self, opponent_player):
+        # Calculate the direction vector after turning left (rotate 90 degrees counterclockwise)
+        opponent_body = opponent_player.get_body()
+        left_turn_direction = self.aim.copy()
+        left_turn_direction.rotate(90)
+        
+        # Check if turning left will cause a collision
+        return not self.will_turn_cause_collision(left_turn_direction, opponent_body)
+
+    def is_right_turn_safe(self, opponent_player):
+        # Calculate the direction vector after turning left (rotate 90 degrees counterclockwise)
+        opponent_body = opponent_player.get_body()
+        right_turn_direction = self.aim.copy()
+        right_turn_direction.rotate(-90)
+        
+        # Check if turning left will cause a collision
+        return not self.will_turn_cause_collision(right_turn_direction, opponent_body)
 
     def manhattan_distance(self, point1, point2):
         x1, y1 = point1
@@ -313,6 +338,13 @@ class Player:
             if not self.is_inside_window(projected):
                 return True
         return False
+    def is_projected_to_lose(self, num_movements, opponent_player):
+        projected_movements = self.get_projected_movements(num_movements)
+        opponent_body = opponent_player.get_body();
+        for projected in projected_movements:
+            if not self.is_inside_window(projected) or projected in opponent_body or projected in self.get_body():
+                return True
+        return False
 
     def is_moves_since_turn_greater_than(self, threshold):
         return self.moves_since_turn_counter > threshold
@@ -410,6 +442,8 @@ def ask_to_play_ai(dialog_text_ai_human, dialog_text_ai_type):
             return AIType.TYPE_A
         elif ai_type.lower() == "b":
             return AIType.TYPE_B
+        elif ai_type.lower() == "c":
+            return AIType.TYPE_C
         else:
             return AIType.TYPE_A
 
@@ -472,8 +506,8 @@ def draw(center_turtle):
     p2.move()
     p2head = p2.get_position().copy()
 
-    p1_failure = not inside(p1head) or p1head in p2.get_body()
-    p2_failure = not inside(p2head) or p2head in p1.get_body()
+    p1_failure = not inside(p1head) or p1head in p2.get_body() or p1head in p1.get_body()
+    p2_failure = not inside(p2head) or p2head in p1.get_body() or p2head in p2.get_body()
     if p1_failure and p2_failure:
         print('TIE!')
         write_text("Game Over!\nTIE.", 0, 0, "center", 20, center_turtle)
@@ -543,6 +577,15 @@ def draw(center_turtle):
             # Execute the decision tree
             outcome = decision_tree.run()
 
+        elif p2.ai_type == AIType.TYPE_C:
+            # Construct the decision tree, type C
+            decision_tree = DecisionNode(decision_function=partial(p2.is_longer_than, 50),
+                                         true_node=Action(partial(p2.set_behavior, Behavior.RANDOM, turtle)),
+                                             false_node=Action(partial(p2.set_behavior, Behavior.RANDOM, turtle))
+                                         )
+            # Execute the decision tree
+            outcome = decision_tree.run()
+
 
 
         # AGGRESSIVE BEHAVIOR TREE
@@ -579,7 +622,7 @@ def draw(center_turtle):
                     Action(partial(p2.turn_random_direction))
                 ]),
                 Sequence([
-                    Condition(partial(p2.is_projected_to_hit_wall, 6)),
+                    Condition(partial(p2.is_projected_to_lose, 6, p2)),
                     Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(5, 10))),
                     Condition(partial(true_with_probability, 0.80)),
                     Action(partial(p2.turn_random_direction))
@@ -596,7 +639,33 @@ def draw(center_turtle):
                     Action(partial(p2.face_away_from_closest_enemy_pixel, p1))
                 ])
             ])
+            root.run()
 
+        elif p2.get_behavior() == Behavior.RANDOM:
+            root = Selector([
+                
+                Sequence([
+                    # Turning right
+                    Condition(partial(p2.is_right_turn_safe, p1)),
+                    Condition(partial(true_with_probability, 0.05)),  # 50% probability
+                    Action(partial(p2.rotate_right))
+                ]),
+                Sequence([
+                    # Turning left
+                    Condition(partial(p2.is_left_turn_safe, p1)),
+                    Condition(partial(true_with_probability, 0.05)),  # 50% probability
+                    Action(partial(p2.rotate_left))
+                ]),
+                Sequence([
+                    Condition(partial(p2.is_projected_to_hit_wall, 3)),
+                    Action(partial(p2.turn_random_direction))
+                ]),
+                Sequence([
+                    Condition(partial(p2.is_projected_to_lose, 3, p2)),
+                    Action(partial(p2.turn_random_direction))
+                ])
+                
+            ])
             root.run()
 
 
@@ -640,4 +709,3 @@ if __name__ == '__main__':
     draw(center_turtle)
 
     turtle.done()
-
