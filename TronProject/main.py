@@ -407,42 +407,42 @@ class Player:
 
         return board
 
-    def create_new_board(self, p1board, p2board):
-        new_board = np.zeros(p1board.shape)
-        x, y = p1board.shape
+    def create_new_board(self, opponent_board, self_board):
+        new_board = np.zeros(opponent_board.shape)
+        x, y = opponent_board.shape
         for i in range(x):
             for j in range(y):
-                if p1board[i, j] != -1 and p2board[i, j] != -1 and not (p1board[i, j] == np.inf and p2board[i, j] == np.inf):
-                    if p1board[i, j] <= p2board[i, j]:
+                if opponent_board[i, j] != -1 and self_board[i, j] != -1 and not (opponent_board[i, j] == np.inf and self_board[i, j] == np.inf):
+                    if opponent_board[i, j] <= self_board[i, j]:
                         new_board[i, j] = 1
-                    elif p1board[i, j] > p2board[i, j]:
+                    elif opponent_board[i, j] > self_board[i, j]:
                         new_board[i, j] = 2
         return new_board
 
     def count_num_positions(self, new_board):
         x, y = new_board.shape
-        p1_count = 0
-        p2_count = 0
+        opponent_count = 0
+        self_count = 0
         for i in range(x):
             for j in range(y):
                 if new_board[i, j] == 1:
-                    p1_count = p1_count + 1
+                    opponent_count = opponent_count + 1
                 if new_board[i, j] == 2:
-                    p2_count = p2_count + 1
-        print("p1_count: " + str(p1_count))
-        print("p2_count: " + str(p2_count))
-        return [p1_count, p2_count]
+                    self_count = self_count + 1
+        print("p1_count: " + str(opponent_count))
+        print("p2_count: " + str(self_count))
+        return [opponent_count, self_count]
 
     def calculate_score(self, position_count):
         p1_count, p2_count = position_count
         return p2_count * 10000000 + p1_count * -100000
 
-    def calculate_sum_shortest_distance(self, player_num, player_board, new_board):
+    def calculate_sum_shortest_distance(self, player_board, new_board):
         x, y = player_board.shape
         sum_shortest_distance = 0
         for i in range(x):
             for j in range(y):
-                if new_board[i, j] == player_num:
+                if new_board[i, j] == 2:
                     sum_shortest_distance += player_board[i, j]
         return sum_shortest_distance
 
@@ -512,11 +512,11 @@ class Player:
         if aim == vector(0, -4) and direction == "UP":
             return 0
         
-    def change_p2_aim(self, opponent_player):
+    def change_aim(self, opponent_player):
         SIZE = 101
 
-        p1_board = np.matrix(np.ones((SIZE,SIZE)) * np.inf)
-        p2_board = np.matrix(np.ones((SIZE,SIZE)) * np.inf)
+        opponent_board = np.matrix(np.ones((SIZE,SIZE)) * np.inf)
+        self_board = np.matrix(np.ones((SIZE,SIZE)) * np.inf)
 
         occupied = opponent_player.get_body().union(self.get_body())
         occupiedCopy = occupied.copy()
@@ -526,15 +526,15 @@ class Player:
 
         best_neighbor = []
 
-        p1_board = self.Dijkstra(p1_board, opponent_player.get_position(), occupied)
-        print(p1_board)
+        opponent_board = self.Dijkstra(opponent_board, opponent_player.get_position(), occupied)
+        print(opponent_board)
 
         for neighbor in self.get_neighbors(self.get_position()):
-            p2_board = self.Dijkstra(p2_board, neighbor, occupiedForAI)
-            new_board = self.create_new_board(p1_board, p2_board)
+            p2_board = self.Dijkstra(self_board, neighbor, occupiedForAI)
+            new_board = self.create_new_board(opponent_board, self_board)
             position_count = self.count_num_positions(new_board)
-            score = self.calculate_sum_shortest_distance(2, p2_board, new_board)
-            # score = self.calculate_score(position_count)
+            # score = self.calculate_sum_shortest_distance(self_board, new_board)
+            score = self.calculate_score(position_count)
             # score += self.calculate_sum_shortest_distance(1, p1_board, new_board)
             print(score)
             neighbor_scores.append((score, neighbor))
@@ -542,15 +542,15 @@ class Player:
         if neighbor_scores:
             best_neighbor = sorted(neighbor_scores, key=lambda x: x[0], reverse=True)[0]
             print(neighbor_scores)
-            direction = self.choose_direction(p2.get_position(), best_neighbor[-1])
-            turn_degree = self.turn_or_not(direction, p2.aim)
+            direction = self.choose_direction(self.get_position(), best_neighbor[-1])
+            turn_degree = self.turn_or_not(direction, self.aim)
             print(turn_degree)
             
             if turn_degree == 90:
-                p2.rotate_left()
+                self.rotate_left()
                 
             if turn_degree == -90:
-                p2.rotate_right()
+                self.rotate_right()
 
 #### START of Behavior Tree
 class Node:
@@ -833,7 +833,7 @@ def draw(center_turtle):
                 Sequence([
                     # Need to avoid collision.
                     Condition(partial(true_with_probability, 0.70)),
-                    Action(partial(p2.change_p2_aim, p1))
+                    Action(partial(p2.change_aim, p1))
                 ])
             ])
 
