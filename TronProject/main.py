@@ -575,7 +575,7 @@ def execute_ai_player_behavior(player, opponent_player, turtle):
                                                                            50),
                                                  true_node=Action(partial(player.set_behavior, Behavior.EVASIVE, turtle)),
                                                  false_node=Action(
-                                                     partial(p2.set_behavior, Behavior.AGGRESSIVE, turtle))
+                                                     partial(player.set_behavior, Behavior.AGGRESSIVE, turtle))
                                              ),
                                              false_node=DecisionNode(
                                                  decision_function=partial(player.is_facing_opponent_com, opponent_player),
@@ -637,18 +637,24 @@ def execute_ai_player_behavior(player, opponent_player, turtle):
             ])
 
             root.run()
-        elif p2.get_behavior() == Behavior.EVASIVE:
+        elif player.get_behavior() == Behavior.EVASIVE:
             root = Selector([
                 Sequence([
                     # Need to avoid collision.
                     Condition(partial(player.is_facing_closest_opponent_pixel, opponent_player)),
                     Condition(partial(true_with_probability, 0.70)),
                     Action(partial(player.face_away_from_closest_enemy_pixel, opponent_player))
+                ]),
+                Sequence([
+                    Condition(partial(player.is_projected_to_hit_wall, 6)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Condition(partial(true_with_probability, 0.80)),
+                    Action(partial(player.turn_random_direction))
                 ])
             ])
             root.run()
 
-        elif p2.get_behavior() == Behavior.RANDOM:
+        elif player.get_behavior() == Behavior.RANDOM:
             root = Selector([
 
                 Sequence([
