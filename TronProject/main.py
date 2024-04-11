@@ -356,9 +356,17 @@ class Player:
         x, y = current_aim
         return vector(y, -x)
 
+    def get_translation_right_aim(self, direction_vect: vector):
+        x, y = direction_vect
+        return vector(y, -x)
+
     def get_projected_left_aim(self):
         current_aim = self.get_aim()
         x, y = current_aim
+        return vector(-y, x)
+
+    def get_translation_left_aim(self, direction_vect: vector):
+        x, y = direction_vect
         return vector(-y, x)
 
     # Turn right or left if no obstructions from either opponent player or wall within certain distance.
@@ -396,9 +404,51 @@ class Player:
 
     # Calculate score for each possible of 3 directions, based on number of free squares within screen sample.
     # Returns true if player turns right or left.
-    def face_fewest_squares_sample(self, opponent_player, sample_square_dimension: int):
-        # TODO implement
+    def face_fewest_squares_sample(self, opponent_player, sample_square_movements_dim: int):
+        aim_vector = self.get_aim()
+        to_the_right_vect = self.get_projected_right_aim()
+        to_the_left_vect = self.get_projected_left_aim()
+
+        forward_sqaure_sample_set = self.extract_sample_square_pos_set(aim_vector, sample_square_movements_dim)
+        forward_peril_count = self.get_peril_square_set_count(forward_sqaure_sample_set, opponent_player)
+
+        right_sqaure_sample_set = self.extract_sample_square_pos_set(to_the_right_vect, sample_square_movements_dim)
+        right_peril_count = self.get_peril_square_set_count(right_sqaure_sample_set, opponent_player)
+
+        left_sqaure_sample_set = self.extract_sample_square_pos_set(to_the_left_vect, sample_square_movements_dim)
+        left_peril_count = self.get_peril_square_set_count(left_sqaure_sample_set, opponent_player)
+
+        if left_peril_count < forward_peril_count or right_peril_count < forward_peril_count:
+            if left_peril_count == right_peril_count:
+                self.turn_random_direction()
+            elif left_peril_count < right_peril_count:
+                self.rotate_left()
+            else:
+                self.rotate_right()
+        else:
+            return False
+
         return True
+
+    def get_peril_square_set_count(self, forward_sqaure_sample_set, opponent_player) -> int:
+        peril_square_forward_set = forward_sqaure_sample_set & opponent_player.get_body()
+        filtered_vectors_left = {vector for projected_vector in peril_square_forward_set if
+                                 abs(projected_vector.x) >= 200 or abs(projected_vector.y) >= 200}
+        peril_square_forward_set = peril_square_forward_set | filtered_vectors_left
+        return len(peril_square_forward_set)
+
+    def extract_sample_square_pos_set(self, input_vector, sample_square_movements_dim) -> set:
+        forward_projected_sample_set = set()
+        for number in range(1, sample_square_movements_dim):
+            projected_pixel = self.position + (number * input_vector)
+            forward_projected_sample_set.add(projected_pixel)
+            for val in range(1, math.floor(sample_square_movements_dim / 2)):
+                projected_pixel_sideways_right = self.position + (val * self.get_translation_right_aim(input_vector))
+                projected_pixel_sideways_left = self.position + (val * self.get_translation_left_aim(input_vector))
+                forward_projected_sample_set.add(projected_pixel_sideways_right)
+                forward_projected_sample_set.add(projected_pixel_sideways_left)
+        return forward_projected_sample_set
+
 
 #### START of Behavior Tree
 class Node:
@@ -697,8 +747,13 @@ def execute_ai_player_behavior(player, opponent_player, turtle):
                 ]),
                 Sequence([
                     Condition(partial(true_with_probability, 0.80)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 25))),
+                    Action(partial(player.face_fewest_squares_sample, opponent_player, 20))
+                ]),
+                Sequence([
+                    Condition(partial(true_with_probability, 0.80)),
                     Condition(partial(player.is_moves_since_turn_greater_than, random.randint(35, 45))),
-                    Action(partial(player.turn_unobstructed_direction, opponent_player, 20))
+                    Action(partial(player.turn_unobstructed_direction, opponent_player, 40))
                 ]),
                 Sequence([
                     Condition(partial(player.is_projected_to_hit_wall, 6)),
