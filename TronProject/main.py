@@ -27,7 +27,7 @@ class AIType(Enum):
     HUMAN = 0
     TYPE_A = 1
     TYPE_B = 2
-    TYPE_C = 3
+    TYPE_RANDOM_ONLY = 3
 
 class Player:
     def __init__(self, position, aim, color, key_left, key_right, ai_type=AIType.HUMAN):
@@ -442,8 +442,8 @@ def ask_to_play_ai(dialog_text_ai_human, dialog_text_ai_type):
             return AIType.TYPE_A
         elif ai_type.lower() == "b":
             return AIType.TYPE_B
-        elif ai_type.lower() == "c":
-            return AIType.TYPE_C
+        elif ai_type.lower() == "random":
+            return AIType.TYPE_RANDOM_ONLY
         else:
             return AIType.TYPE_A
 
@@ -506,8 +506,8 @@ def draw(center_turtle):
     p2.move()
     p2head = p2.get_position().copy()
 
-    p1_failure = not inside(p1head) or p1head in p2.get_body() or p1head in p1.get_body()
-    p2_failure = not inside(p2head) or p2head in p1.get_body() or p2head in p2.get_body()
+    p1_failure = not inside(p1head) or p1head in p2.get_body()
+    p2_failure = not inside(p2head) or p2head in p1.get_body()
     if p1_failure and p2_failure:
         print('TIE!')
         write_text("Game Over!\nTIE.", 0, 0, "center", 20, center_turtle)
@@ -577,12 +577,9 @@ def draw(center_turtle):
             # Execute the decision tree
             outcome = decision_tree.run()
 
-        elif p2.ai_type == AIType.TYPE_C:
+        elif p2.ai_type == AIType.TYPE_RANDOM_ONLY:
             # Construct the decision tree, type C
-            decision_tree = DecisionNode(decision_function=partial(p2.is_longer_than, 50),
-                                         true_node=Action(partial(p2.set_behavior, Behavior.RANDOM, turtle)),
-                                             false_node=Action(partial(p2.set_behavior, Behavior.RANDOM, turtle))
-                                         )
+            decision_tree = Action(partial(p2.set_behavior, Behavior.RANDOM, turtle))
             # Execute the decision tree
             outcome = decision_tree.run()
 
@@ -601,12 +598,13 @@ def draw(center_turtle):
         #    Action(search_for_enemy)
         #])
 
-        #p2.set_behavior(Behavior.AGGRESSIVE)
+        #p2.set_behavior(Behavior.RANDOM, turtle)
 
         if p2.get_behavior() == Behavior.AGGRESSIVE:
             root = Selector([
                 Sequence([
                     Condition(partial(p2.is_closer_to_projected_pixel, p1, 40 * MOVEMENT_SIZE)),
+                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(2, 5))),
                     Action(partial(p2.face_closest_projected_enemy_pixel, p1, 40 * MOVEMENT_SIZE))
                 ]),
                 Sequence([
@@ -622,7 +620,7 @@ def draw(center_turtle):
                     Action(partial(p2.turn_random_direction))
                 ]),
                 Sequence([
-                    Condition(partial(p2.is_projected_to_lose, 6, p2)),
+                    Condition(partial(p2.is_projected_to_hit_wall, 6)),
                     Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(5, 10))),
                     Condition(partial(true_with_probability, 0.80)),
                     Action(partial(p2.turn_random_direction))
@@ -647,21 +645,26 @@ def draw(center_turtle):
                 Sequence([
                     # Turning right
                     Condition(partial(p2.is_right_turn_safe, p1)),
-                    Condition(partial(true_with_probability, 0.05)),  # 50% probability
+                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Condition(partial(true_with_probability, 0.25)),  # 50% probability
                     Action(partial(p2.rotate_right))
                 ]),
                 Sequence([
                     # Turning left
                     Condition(partial(p2.is_left_turn_safe, p1)),
-                    Condition(partial(true_with_probability, 0.05)),  # 50% probability
+                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Condition(partial(true_with_probability, 0.25)),  # 50% probability
                     Action(partial(p2.rotate_left))
                 ]),
                 Sequence([
                     Condition(partial(p2.is_projected_to_hit_wall, 3)),
+                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(2, 4))),
+                    Condition(partial(true_with_probability, 0.80)),  # 50% probability
                     Action(partial(p2.turn_random_direction))
                 ]),
                 Sequence([
-                    Condition(partial(p2.is_projected_to_lose, 3, p2)),
+                    Condition(partial(p2.is_projected_to_lose, 3, p1)),
+                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(5, 10))),
                     Action(partial(p2.turn_random_direction))
                 ])
                 
