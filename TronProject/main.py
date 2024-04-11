@@ -747,18 +747,18 @@ def execute_ai_player_behavior(player, opponent_player, turtle):
                 ]),
                 Sequence([
                     Condition(partial(true_with_probability, 0.80)),
-                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 25))),
-                    Action(partial(player.face_fewest_squares_sample, opponent_player, 20))
-                ]),
-                Sequence([
-                    Condition(partial(true_with_probability, 0.80)),
                     Condition(partial(player.is_moves_since_turn_greater_than, random.randint(35, 45))),
                     Action(partial(player.turn_unobstructed_direction, opponent_player, 40))
                 ]),
                 Sequence([
-                    Condition(partial(player.is_projected_to_hit_wall, 6)),
-                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
                     Condition(partial(true_with_probability, 0.80)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 25))),
+                    Action(partial(player.face_fewest_squares_sample, opponent_player, 20))
+                ]),
+                Sequence([
+                    Condition(partial(player.is_projected_to_hit_wall, 7)),
+                    Condition(partial(true_with_probability, 0.80)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
                     Action(partial(player.turn_random_direction))
                 ])
             ])
