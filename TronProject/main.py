@@ -27,6 +27,9 @@ class AIType(Enum):
     HUMAN = 0
     TYPE_A = 1
     TYPE_B = 2
+    TYPE_RANDOM_ONLY = 3
+    TYPE_AGGRESSIVE_ONLY = 4
+    TYPE_EVASIVE_ONLY = 5
 
 class Player:
     def __init__(self, position, aim, color, key_left, key_right, ai_type=AIType.HUMAN):
@@ -95,9 +98,7 @@ class Player:
         next_position.x = (next_position.x + 200) % 400 - 200
         next_position.y = (next_position.y + 200) % 400 - 200
         self.position = next_position
-        self.body.add(self.position.copy())
         self.moves_since_turn_counter = self.moves_since_turn_counter + 1
-        print("MOVES: ", self.moves_since_turn_counter)
 
     def get_projected_movements(self, num_movements):
         set_projected = set()
@@ -138,6 +139,31 @@ class Player:
         dy = y2 - y1
 
         return vector(dx, dy)
+
+    def will_turn_cause_collision(self, direction_vector, opponent_body):
+        # Simulate the movement after turning left or right
+        next_position = self.position + direction_vector
+        
+        # Check if the next position leads to a collision with walls or opponent's body
+        return not inside(next_position) or next_position in opponent_body
+
+    def is_left_turn_safe(self, opponent_player):
+        # Calculate the direction vector after turning left (rotate 90 degrees counterclockwise)
+        opponent_body = opponent_player.get_body()
+        left_turn_direction = self.aim.copy()
+        left_turn_direction.rotate(90)
+        
+        # Check if turning left will cause a collision
+        return not self.will_turn_cause_collision(left_turn_direction, opponent_body)
+
+    def is_right_turn_safe(self, opponent_player):
+        # Calculate the direction vector after turning left (rotate 90 degrees counterclockwise)
+        opponent_body = opponent_player.get_body()
+        right_turn_direction = self.aim.copy()
+        right_turn_direction.rotate(-90)
+        
+        # Check if turning left will cause a collision
+        return not self.will_turn_cause_collision(right_turn_direction, opponent_body)
 
     def manhattan_distance(self, point1, point2):
         x1, y1 = point1
@@ -313,9 +339,115 @@ class Player:
             if not self.is_inside_window(projected):
                 return True
         return False
+    def is_projected_to_lose(self, num_movements, opponent_player):
+        projected_movements = self.get_projected_movements(num_movements)
+        opponent_body = opponent_player.get_body();
+        for projected in projected_movements:
+            if not self.is_inside_window(projected) or projected in opponent_body or projected in self.get_body():
+                return True
+        return False
 
     def is_moves_since_turn_greater_than(self, threshold):
         return self.moves_since_turn_counter > threshold
+
+    def get_projected_right_aim(self):
+        current_aim = self.get_aim()
+        x, y = current_aim
+        return vector(y, -x)
+
+    def get_translation_right_aim(self, direction_vect: vector):
+        x, y = direction_vect
+        return vector(y, -x)
+
+    def get_projected_left_aim(self):
+        current_aim = self.get_aim()
+        x, y = current_aim
+        return vector(-y, x)
+
+    def get_translation_left_aim(self, direction_vect: vector):
+        x, y = direction_vect
+        return vector(-y, x)
+
+    # Turn right or left if no obstructions from either opponent player or wall within certain distance.
+    # Returns true if turns.
+    def turn_unobstructed_direction(self, opponent_player, lookahead_num: int):
+        right_aim = self.get_projected_right_aim()
+        set_projected_right = set()
+        for number in range(1, lookahead_num):
+            set_projected_right.add(self.position + (number * right_aim))
+        peril_movements_right = set_projected_right & opponent_player.get_body()
+        filtered_vectors_right = {vector for projected_vector in set_projected_right if abs(projected_vector.x) >= 160 or abs(projected_vector.y) >= 160}
+        peril_movements_right = peril_movements_right | filtered_vectors_right
+
+        left_aim = self.get_projected_left_aim()
+        set_projected_left = set()
+        for number in range(1, lookahead_num):
+            set_projected_left.add(self.position + (number * left_aim))
+        peril_movements_left = set_projected_left & opponent_player.get_body()
+        filtered_vectors_left = {vector for projected_vector in set_projected_left if abs(projected_vector.x) >= 200 or abs(projected_vector.y) >= 200}
+        peril_movements_left = peril_movements_left | filtered_vectors_left
+
+        is_right_obstructed = len(peril_movements_right) > 0
+        is_left_obstructed = len(peril_movements_left) > 0
+
+        if not is_right_obstructed and not is_left_obstructed:
+            self.turn_random_direction()
+        elif not is_right_obstructed:
+            self.rotate_right()
+        elif not is_left_obstructed:
+            self.rotate_left()
+        else:
+            return False
+        print("turn_unobstructed_direction")
+        return True
+
+    # Calculate score for each possible of 3 directions, based on number of free squares within screen sample.
+    # Returns true if player turns right or left.
+    def face_fewest_squares_sample(self, opponent_player, sample_square_movements_dim: int):
+        aim_vector = self.get_aim()
+        to_the_right_vect = self.get_projected_right_aim()
+        to_the_left_vect = self.get_projected_left_aim()
+
+        forward_sqaure_sample_set = self.extract_sample_square_pos_set(aim_vector, sample_square_movements_dim)
+        forward_peril_count = self.get_peril_square_set_count(forward_sqaure_sample_set, opponent_player)
+
+        right_sqaure_sample_set = self.extract_sample_square_pos_set(to_the_right_vect, sample_square_movements_dim)
+        right_peril_count = self.get_peril_square_set_count(right_sqaure_sample_set, opponent_player)
+
+        left_sqaure_sample_set = self.extract_sample_square_pos_set(to_the_left_vect, sample_square_movements_dim)
+        left_peril_count = self.get_peril_square_set_count(left_sqaure_sample_set, opponent_player)
+
+        if left_peril_count < forward_peril_count or right_peril_count < forward_peril_count:
+            if left_peril_count == right_peril_count:
+                self.turn_random_direction()
+            elif left_peril_count < right_peril_count:
+                self.rotate_left()
+            else:
+                self.rotate_right()
+        else:
+            return False
+        print("face_fewest_squares_sample")
+        return True
+
+    def get_peril_square_set_count(self, forward_sqaure_sample_set, opponent_player) -> int:
+        peril_square_forward_set = forward_sqaure_sample_set & opponent_player.get_body()
+        filtered_vectors_left = {vector for projected_vector in peril_square_forward_set if
+                                 abs(projected_vector.x) >= 200 or abs(projected_vector.y) >= 200}
+        peril_square_forward_set = peril_square_forward_set | filtered_vectors_left
+        return len(peril_square_forward_set)
+
+    def extract_sample_square_pos_set(self, input_vector, sample_square_movements_dim) -> set:
+        forward_projected_sample_set = set()
+        for number in range(1, sample_square_movements_dim):
+            projected_pixel = self.position + (number * input_vector)
+            forward_projected_sample_set.add(projected_pixel)
+            for val in range(1, math.floor(sample_square_movements_dim / 2)):
+                projected_pixel_sideways_right = self.position + (val * self.get_translation_right_aim(input_vector))
+                projected_pixel_sideways_left = self.position + (val * self.get_translation_left_aim(input_vector))
+                forward_projected_sample_set.add(projected_pixel_sideways_right)
+                forward_projected_sample_set.add(projected_pixel_sideways_left)
+        return forward_projected_sample_set
+
 
 #### START of Behavior Tree
 class Node:
@@ -410,6 +542,12 @@ def ask_to_play_ai(dialog_text_ai_human, dialog_text_ai_type):
             return AIType.TYPE_A
         elif ai_type.lower() == "b":
             return AIType.TYPE_B
+        elif ai_type.lower() == "random":
+            return AIType.TYPE_RANDOM_ONLY
+        elif ai_type.lower() == "aggressive":
+            return AIType.TYPE_AGGRESSIVE_ONLY
+        elif ai_type.lower() == "evasive":
+            return AIType.TYPE_EVASIVE_ONLY
         else:
             return AIType.TYPE_A
 
@@ -499,120 +637,177 @@ def draw(center_turtle):
     # DECISION TREE LOGIC HERE
     # background color changes indicate what behavior the AI should be performing
     if p2.is_ai():
-        if p2.ai_type == AIType.TYPE_A:
+        execute_ai_player_behavior(p2, p1, turtle)
+    if p1.is_ai():
+        execute_ai_player_behavior(p1, p2, None)
+
+    turtle.ontimer(lambda: draw(center_turtle), 100)
+
+# Execute behavior for an AI player.
+# "turtle" is None if you don't want the background color to change when this player's active behavior tree changes.
+def execute_ai_player_behavior(player, opponent_player, turtle):
+    if player.is_ai():
+        if player.ai_type == AIType.TYPE_A:
             # Construct the decision tree, type A
             decision_tree = DecisionNode(
-                decision_function=partial(p2.is_head_within_dist_opponent_head, p1, 10),
-                true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
-                false_node=DecisionNode(decision_function=partial(p2.is_crash_into_opponent_anticipated,p1, 20),
-                                        true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
+                decision_function=partial(player.is_head_within_dist_opponent_head, opponent_player, 10),
+                true_node=Action(partial(player.set_behavior, Behavior.EVASIVE, turtle)),
+                false_node=DecisionNode(decision_function=partial(player.is_crash_into_opponent_anticipated, opponent_player, 20),
+                                        true_node=Action(partial(player.set_behavior, Behavior.EVASIVE, turtle)),
                                         false_node=DecisionNode(
-                                            decision_function=partial(p2.is_facing_opponent_com, p1),
-                                            true_node=Action(partial(p2.set_behavior, Behavior.RANDOM, turtle)),
-                                            false_node=Action(partial(p2.set_behavior, Behavior.AGGRESSIVE, turtle))
+                                            decision_function=partial(player.is_facing_opponent_com, opponent_player),
+                                            true_node=Action(partial(player.set_behavior, Behavior.RANDOM, turtle)),
+                                            false_node=Action(partial(player.set_behavior, Behavior.AGGRESSIVE, turtle))
                                         )
-                )
+                                        )
             )
             # Execute the decision tree
             outcome = decision_tree.run()
-        elif p2.ai_type == AIType.TYPE_B:
+        elif player.ai_type == AIType.TYPE_B:
             # Construct the decision tree, type B
-            decision_tree = DecisionNode(decision_function=partial(p2.is_longer_than, 50),
+            decision_tree = DecisionNode(decision_function=partial(player.is_longer_than, 50),
                                          true_node=DecisionNode(
-                                             decision_function=partial(p2.is_crash_into_opponent_anticipated, p1, 50),
+                                             decision_function=partial(player.is_crash_into_opponent_anticipated, opponent_player, 50),
                                              true_node=DecisionNode(
-                                                 decision_function=partial(p2.is_crash_into_opponent_anticipated, p1,
+                                                 decision_function=partial(player.is_crash_into_opponent_anticipated, opponent_player,
                                                                            50),
-                                                 true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
+                                                 true_node=Action(partial(player.set_behavior, Behavior.EVASIVE, turtle)),
                                                  false_node=Action(
-                                                     partial(p2.set_behavior, Behavior.AGGRESSIVE, turtle))
-                                                 ),
-                                             false_node=DecisionNode(
-                                                 decision_function=partial(p2.is_facing_opponent_com, p1),
-                                                 true_node=Action(partial(p2.set_behavior, Behavior.RANDOM, turtle)),
-                                                 false_node=Action(
-                                                     partial(p2.set_behavior, Behavior.AGGRESSIVE, turtle))
-                                             )
+                                                     partial(player.set_behavior, Behavior.AGGRESSIVE, turtle))
                                              ),
-                                         false_node=DecisionNode(
-                                             decision_function=partial(p2.is_head_within_dist_opponent_head, p1, 30),
-                                             true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
-                                             false_node=Action(partial(p2.set_behavior, Behavior.RANDOM, turtle))
+                                             false_node=DecisionNode(
+                                                 decision_function=partial(player.is_facing_opponent_com, opponent_player),
+                                                 true_node=Action(partial(player.set_behavior, Behavior.RANDOM, turtle)),
+                                                 false_node=Action(
+                                                     partial(player.set_behavior, Behavior.AGGRESSIVE, turtle))
                                              )
+                                         ),
+                                         false_node=DecisionNode(
+                                             decision_function=partial(player.is_head_within_dist_opponent_head, opponent_player, 30),
+                                             true_node=Action(partial(player.set_behavior, Behavior.EVASIVE, turtle)),
+                                             false_node=Action(partial(player.set_behavior, Behavior.RANDOM, turtle))
+                                         )
                                          )
             # Execute the decision tree
             outcome = decision_tree.run()
 
+        elif player.ai_type == AIType.TYPE_RANDOM_ONLY:
+            # Construct the decision tree, type C
+            decision_tree = Action(partial(player.set_behavior, Behavior.RANDOM, turtle))
+            # Execute the decision tree
+            outcome = decision_tree.run()
+        elif player.ai_type == AIType.TYPE_AGGRESSIVE_ONLY:
+            # Construct the decision tree, type C
+            decision_tree = Action(partial(player.set_behavior, Behavior.AGGRESSIVE, turtle))
+            # Execute the decision tree
+            outcome = decision_tree.run()
+        elif player.ai_type == AIType.TYPE_EVASIVE_ONLY:
+            # Construct the decision tree, type C
+            decision_tree = Action(partial(player.set_behavior, Behavior.EVASIVE, turtle))
+            # Execute the decision tree
+            outcome = decision_tree.run()
 
-
-        # AGGRESSIVE BEHAVIOR TREE
-        # Constructing the behavior tree
-        #p2.set_behavior(Behavior.AGGRESSIVE)
-        #p2.set_behavior(Behavior.EVASIVE)
-
-        #root = Selector([
-        #    Sequence([
-        #        Condition(is_enemy_visible),
-        #        Action(attack)
-        #    ]),
-        #    Action(search_for_enemy)
-        #])
-
-        #p2.set_behavior(Behavior.AGGRESSIVE)
-
-        if p2.get_behavior() == Behavior.AGGRESSIVE:
+        if player.get_behavior() == Behavior.AGGRESSIVE:
             root = Selector([
                 Sequence([
-                    Condition(partial(p2.is_closer_to_projected_pixel, p1, 40 * MOVEMENT_SIZE)),
-                    Action(partial(p2.face_closest_projected_enemy_pixel, p1, 40 * MOVEMENT_SIZE))
+                    Condition(partial(player.is_closer_to_projected_pixel, opponent_player, 40 * MOVEMENT_SIZE)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(2, 5))),
+                    Action(partial(player.face_closest_projected_enemy_pixel, opponent_player, 40 * MOVEMENT_SIZE))
                 ]),
                 Sequence([
-                    Condition(partial(p2.is_far_from_opponent, p1, 25)),
-                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(3, 6))),
+                    Condition(partial(player.is_far_from_opponent, opponent_player, 25)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(3, 6))),
                     Condition(partial(true_with_probability, 0.70)),
-                    Action(partial(p2.face_closest_enemy_pixel, p1))
+                    Action(partial(player.face_closest_enemy_pixel, opponent_player))
                 ]),
                 Sequence([
-                    Condition(partial(p2.is_facing_opposite_enemy, p1)),
-                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(15, 22))),
+                    Condition(partial(player.is_facing_opposite_enemy, opponent_player)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(15, 22))),
                     Condition(partial(true_with_probability, 0.80)),
-                    Action(partial(p2.turn_random_direction))
+                    Action(partial(player.turn_random_direction))
                 ]),
                 Sequence([
-                    Condition(partial(p2.is_projected_to_hit_wall, 6)),
-                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Condition(partial(player.is_projected_to_hit_wall, 6)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
                     Condition(partial(true_with_probability, 0.80)),
-                    Action(partial(p2.turn_random_direction))
+                    Action(partial(player.turn_random_direction))
                 ])
             ])
 
             root.run()
-        elif p2.get_behavior() == Behavior.EVASIVE:
+        elif player.get_behavior() == Behavior.EVASIVE:
             root = Selector([
                 Sequence([
                     # Need to avoid collision.
-                    Condition(partial(p2.is_facing_closest_opponent_pixel, p1)),
+                    Condition(partial(player.is_facing_closest_opponent_pixel, opponent_player)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 25))),
                     Condition(partial(true_with_probability, 0.70)),
-                    Action(partial(p2.face_away_from_closest_enemy_pixel, p1))
+                    Action(partial(player.face_away_from_closest_enemy_pixel, opponent_player))
+                ]),
+                Sequence([
+                    Condition(partial(true_with_probability, 0.80)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(15, 35))),
+                    Action(partial(player.turn_unobstructed_direction, opponent_player, 50))
+                ]),
+                Sequence([
+                    Condition(partial(true_with_probability, 0.80)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(25, 55))),
+                    Action(partial(player.face_fewest_squares_sample, opponent_player, 20))
+                ]),
+                Sequence([
+                    Condition(partial(player.is_projected_to_hit_wall, 7)),
+                    Condition(partial(true_with_probability, 0.80)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Action(partial(player.turn_random_direction))
                 ])
             ])
-
             root.run()
 
+        elif player.get_behavior() == Behavior.RANDOM:
+            root = Selector([
 
-    turtle.ontimer(lambda: draw(center_turtle), 100)
+                Sequence([
+                    # Turning right
+                    Condition(partial(player.is_right_turn_safe, opponent_player)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Condition(partial(true_with_probability, 0.25)),  # 50% probability
+                    Action(partial(player.rotate_right))
+                ]),
+                Sequence([
+                    # Turning left
+                    Condition(partial(player.is_left_turn_safe, opponent_player)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Condition(partial(true_with_probability, 0.25)),  # 50% probability
+                    Action(partial(player.rotate_left))
+                ]),
+                Sequence([
+                    Condition(partial(player.is_projected_to_hit_wall, 3)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(2, 4))),
+                    Condition(partial(true_with_probability, 0.80)),  # 50% probability
+                    Action(partial(player.turn_random_direction))
+                ]),
+                Sequence([
+                    Condition(partial(player.is_projected_to_lose, 3, player)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Action(partial(player.turn_random_direction))
+                ])
+
+            ])
+            root.run()
 
 if __name__ == '__main__':
     p1xy = vector(-100, 0)
     p1aim = vector(MOVEMENT_SIZE, 0)
-    p1 = Player(p1xy, p1aim, 'red', 'a', 'd')
+    p1 = Player(p1xy, p1aim, 'red', 'a', 'd',
+                ai_type=ask_to_play_ai("Do you want Player 1 to be an AI or a Human? (AI/Human)",
+                                       "Should Player 1 be of AI type A or B? (A/B) \nYou may also alternatively type either: 'random', 'aggressive', or 'evasive' (for single behavior demo purposes)."))
     #p1body = set()
 
     p2xy = vector(100, 0)
     p2aim = vector(-1 * MOVEMENT_SIZE, 0)
     p2 = Player(p2xy, p2aim, 'blue', 'j', 'l',
                 ai_type=ask_to_play_ai("Do you want Player 2 to be an AI or a Human? (AI/Human)",
-                                       "Should Player 2 to be AI type A or B? (A/B)"))
+                                       "Should Player 2 be of AI type A or B? (A/B) \nYou may also alternatively type either: 'random', 'aggressive', or 'evasive' (for single behavior demo purposes)."))
     #p2body = set()
 
     players = [p1, p2]
@@ -640,4 +835,3 @@ if __name__ == '__main__':
     draw(center_turtle)
 
     turtle.done()
-
