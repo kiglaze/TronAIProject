@@ -788,7 +788,7 @@ def execute_ai_player_behavior(player, opponent_player, turtle):
                     Action(partial(player.turn_random_direction))
                 ]),
                 Sequence([
-                    Condition(partial(player.is_projected_to_lose, 3, opponent_player)),
+                    Condition(partial(player.is_projected_to_lose, 3, player)),
                     Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
                     Action(partial(player.turn_random_direction))
                 ])
