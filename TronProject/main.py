@@ -371,7 +371,6 @@ class Player:
     # Turn right or left if no obstructions from either opponent player or wall within certain distance.
     # Returns true if turns.
     def turn_unobstructed_direction(self, opponent_player, lookahead_num: int):
-        print("turn_unobstructed_direction")
         right_aim = self.get_projected_right_aim()
         set_projected_right = set()
         for number in range(1, lookahead_num):
@@ -399,13 +398,12 @@ class Player:
             self.rotate_left()
         else:
             return False
-
+        print("turn_unobstructed_direction")
         return True
 
     # Calculate score for each possible of 3 directions, based on number of free squares within screen sample.
     # Returns true if player turns right or left.
     def face_fewest_squares_sample(self, opponent_player, sample_square_movements_dim: int):
-        print("face_fewest_squares_sample")
         aim_vector = self.get_aim()
         to_the_right_vect = self.get_projected_right_aim()
         to_the_left_vect = self.get_projected_left_aim()
@@ -428,7 +426,7 @@ class Player:
                 self.rotate_right()
         else:
             return False
-
+        print("face_fewest_squares_sample")
         return True
 
     def get_peril_square_set_count(self, forward_sqaure_sample_set, opponent_player) -> int:
