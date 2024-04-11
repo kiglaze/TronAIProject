@@ -351,6 +351,55 @@ class Player:
     def is_moves_since_turn_greater_than(self, threshold):
         return self.moves_since_turn_counter > threshold
 
+    def get_projected_right_aim(self):
+        current_aim = self.get_aim()
+        x, y = current_aim
+        return vector(y, -x)
+
+    def get_projected_left_aim(self):
+        current_aim = self.get_aim()
+        x, y = current_aim
+        return vector(-y, x)
+
+    # Turn right or left if no obstructions from either opponent player or wall within certain distance.
+    # Returns true if turns.
+    def turn_unobstructed_direction(self, opponent_player, lookahead_num: int):
+        right_aim = self.get_projected_right_aim()
+        set_projected_right = set()
+        for number in range(1, lookahead_num):
+            set_projected_right.add(self.position + (number * right_aim))
+        peril_movements_right = set_projected_right & opponent_player.get_body()
+        filtered_vectors_right = {vector for projected_vector in set_projected_right if abs(projected_vector.x) >= 160 or abs(projected_vector.y) >= 160}
+        peril_movements_right = peril_movements_right | filtered_vectors_right
+
+        left_aim = self.get_projected_left_aim()
+        set_projected_left = set()
+        for number in range(1, lookahead_num):
+            set_projected_left.add(self.position + (number * left_aim))
+        peril_movements_left = set_projected_left & opponent_player.get_body()
+        filtered_vectors_left = {vector for projected_vector in set_projected_left if abs(projected_vector.x) >= 200 or abs(projected_vector.y) >= 200}
+        peril_movements_left = peril_movements_left | filtered_vectors_left
+
+        is_right_obstructed = len(peril_movements_right) > 0
+        is_left_obstructed = len(peril_movements_left) > 0
+
+        if not is_right_obstructed and not is_left_obstructed:
+            self.turn_random_direction()
+        elif not is_right_obstructed:
+            self.rotate_right()
+        elif not is_left_obstructed:
+            self.rotate_left()
+        else:
+            return False
+
+        return True
+
+    # Calculate score for each possible of 3 directions, based on number of free squares within screen sample.
+    # Returns true if player turns right or left.
+    def face_fewest_squares_sample(self, opponent_player, sample_square_dimension: int):
+        # TODO implement
+        return True
+
 #### START of Behavior Tree
 class Node:
     """Base class for all nodes."""
@@ -642,8 +691,14 @@ def execute_ai_player_behavior(player, opponent_player, turtle):
                 Sequence([
                     # Need to avoid collision.
                     Condition(partial(player.is_facing_closest_opponent_pixel, opponent_player)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(10, 25))),
                     Condition(partial(true_with_probability, 0.70)),
                     Action(partial(player.face_away_from_closest_enemy_pixel, opponent_player))
+                ]),
+                Sequence([
+                    Condition(partial(true_with_probability, 0.80)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(35, 45))),
+                    Action(partial(player.turn_unobstructed_direction, opponent_player, 20))
                 ]),
                 Sequence([
                     Condition(partial(player.is_projected_to_hit_wall, 6)),
