@@ -28,6 +28,8 @@ class AIType(Enum):
     TYPE_A = 1
     TYPE_B = 2
     TYPE_RANDOM_ONLY = 3
+    TYPE_AGGRESSIVE_ONLY = 4
+    TYPE_EVASIVE_ONLY = 5
 
 class Player:
     def __init__(self, position, aim, color, key_left, key_right, ai_type=AIType.HUMAN):
@@ -444,6 +446,10 @@ def ask_to_play_ai(dialog_text_ai_human, dialog_text_ai_type):
             return AIType.TYPE_B
         elif ai_type.lower() == "random":
             return AIType.TYPE_RANDOM_ONLY
+        elif ai_type.lower() == "aggressive":
+            return AIType.TYPE_AGGRESSIVE_ONLY
+        elif ai_type.lower() == "evasive":
+            return AIType.TYPE_EVASIVE_ONLY
         else:
             return AIType.TYPE_A
 
@@ -582,6 +588,16 @@ def draw(center_turtle):
             decision_tree = Action(partial(p2.set_behavior, Behavior.RANDOM, turtle))
             # Execute the decision tree
             outcome = decision_tree.run()
+        elif p2.ai_type == AIType.TYPE_AGGRESSIVE_ONLY:
+            # Construct the decision tree, type C
+            decision_tree = Action(partial(p2.set_behavior, Behavior.AGGRESSIVE, turtle))
+            # Execute the decision tree
+            outcome = decision_tree.run()
+        elif p2.ai_type == AIType.TYPE_EVASIVE_ONLY:
+            # Construct the decision tree, type C
+            decision_tree = Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle))
+            # Execute the decision tree
+            outcome = decision_tree.run()
 
 
 
@@ -684,7 +700,7 @@ if __name__ == '__main__':
     p2aim = vector(-1 * MOVEMENT_SIZE, 0)
     p2 = Player(p2xy, p2aim, 'blue', 'j', 'l',
                 ai_type=ask_to_play_ai("Do you want Player 2 to be an AI or a Human? (AI/Human)",
-                                       "Should Player 2 to be AI type A or B? (A/B)"))
+                                       "Should Player 2 be of AI type A or B? (A/B) \nYou may also alternatively type either: 'random', 'aggressive', or 'evasive' (for single behavior demo purposes)."))
     #p2body = set()
 
     players = [p1, p2]
