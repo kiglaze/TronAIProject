@@ -741,18 +741,18 @@ def execute_ai_player_behavior(player, opponent_player, turtle):
                 Sequence([
                     # Need to avoid collision.
                     Condition(partial(player.is_facing_closest_opponent_pixel, opponent_player)),
-                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(10, 25))),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 25))),
                     Condition(partial(true_with_probability, 0.70)),
                     Action(partial(player.face_away_from_closest_enemy_pixel, opponent_player))
                 ]),
                 Sequence([
                     Condition(partial(true_with_probability, 0.80)),
-                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(35, 45))),
-                    Action(partial(player.turn_unobstructed_direction, opponent_player, 40))
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(15, 35))),
+                    Action(partial(player.turn_unobstructed_direction, opponent_player, 50))
                 ]),
                 Sequence([
                     Condition(partial(true_with_probability, 0.80)),
-                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 25))),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(25, 55))),
                     Action(partial(player.face_fewest_squares_sample, opponent_player, 20))
                 ]),
                 Sequence([
