@@ -250,12 +250,11 @@ class Player:
             return random.choice(all_possible_directions)
 
     def turn_random_direction(self):
-        print("turn_random_direction")
-        print(self.moves_since_turn_counter)
         previous_aim_vector = self.get_aim()
         self.set_aim(self.get_random_turn_direction())
         if previous_aim_vector is self.get_aim():
             return False
+        print("turn_random_direction")
         return True
 
     def face_away_from_closest_enemy_pixel(self, opponent_player):
@@ -273,7 +272,8 @@ class Player:
             self.set_aim(random_turn_direction_vect)
             if previous_aim_vect is self.get_aim():
                 return False
-            return True
+        print("face_away_from_closest_enemy_pixel")
+        return True
 
     def is_facing_closest_opponent_pixel(self, opponent_player):
         direction_vect_closest_enemy_pixel = self.get_closest_enemy_pixel_direction_vect(opponent_player)
@@ -391,7 +391,11 @@ class Player:
         is_left_obstructed = len(peril_movements_left) > 0
 
         if not is_right_obstructed and not is_left_obstructed:
-            self.turn_random_direction()
+            random_value = random.random()
+            if random_value > .5:
+                self.rotate_right()
+            else:
+                self.rotate_left()
         elif not is_right_obstructed:
             self.rotate_right()
         elif not is_left_obstructed:
@@ -417,9 +421,15 @@ class Player:
         left_sqaure_sample_set = self.extract_sample_square_pos_set(to_the_left_vect, sample_square_movements_dim)
         left_peril_count = self.get_peril_square_set_count(left_sqaure_sample_set, opponent_player)
 
+        print("forward_peril_count: ", forward_peril_count, ";right_peril_count: ", right_peril_count, ";left_peril_count: ", left_peril_count)
+
         if left_peril_count < forward_peril_count or right_peril_count < forward_peril_count:
             if left_peril_count == right_peril_count:
-                self.turn_random_direction()
+                random_value = random.random()
+                if random_value > .5:
+                    self.rotate_right()
+                else:
+                    self.rotate_left()
             elif left_peril_count < right_peril_count:
                 self.rotate_left()
             else:
@@ -442,11 +452,15 @@ class Player:
             projected_pixel = self.position + (number * input_vector)
             forward_projected_sample_set.add(projected_pixel)
             for val in range(1, math.floor(sample_square_movements_dim / 2)):
-                projected_pixel_sideways_right = self.position + (val * self.get_translation_right_aim(input_vector))
-                projected_pixel_sideways_left = self.position + (val * self.get_translation_left_aim(input_vector))
+                projected_pixel_sideways_right = projected_pixel + (val * self.get_translation_right_aim(input_vector))
+                projected_pixel_sideways_left = projected_pixel + (val * self.get_translation_left_aim(input_vector))
                 forward_projected_sample_set.add(projected_pixel_sideways_right)
                 forward_projected_sample_set.add(projected_pixel_sideways_left)
         return forward_projected_sample_set
+
+    def is_not_near_wall(self, num_movements_away):
+        position_vect = self.get_position()
+        return abs(position_vect.x) < (200 - (num_movements_away * MOVEMENT_SIZE)) and abs(position_vect.y) < (200 - (num_movements_away * MOVEMENT_SIZE))
 
 
 #### START of Behavior Tree
@@ -739,25 +753,32 @@ def execute_ai_player_behavior(player, opponent_player, turtle):
             root = Selector([
                 Sequence([
                     # Need to avoid collision.
+                    Condition(partial(player.is_not_near_wall, 10)),
                     Condition(partial(player.is_facing_closest_opponent_pixel, opponent_player)),
                     Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 25))),
                     Condition(partial(true_with_probability, 0.70)),
                     Action(partial(player.face_away_from_closest_enemy_pixel, opponent_player))
                 ]),
-                Sequence([
-                    Condition(partial(true_with_probability, 0.80)),
-                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(15, 35))),
-                    Action(partial(player.turn_unobstructed_direction, opponent_player, 50))
-                ]),
+                # Sequence([
+                #     Condition(partial(true_with_probability, 0.80)),
+                #     Condition(partial(player.is_moves_since_turn_greater_than, random.randint(15, 35))),
+                #     Action(partial(player.turn_unobstructed_direction, opponent_player, 50))
+                # ]),
                 Sequence([
                     Condition(partial(true_with_probability, 0.80)),
                     Condition(partial(player.is_moves_since_turn_greater_than, random.randint(25, 55))),
                     Action(partial(player.face_fewest_squares_sample, opponent_player, 20))
                 ]),
                 Sequence([
-                    Condition(partial(player.is_projected_to_hit_wall, 7)),
+                    Condition(partial(player.is_projected_to_hit_wall, 6)),
                     Condition(partial(true_with_probability, 0.80)),
                     Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Action(partial(player.turn_unobstructed_direction, opponent_player, 50))
+                ]),
+                Sequence([
+                    Condition(partial(player.is_projected_to_hit_wall, 6)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Condition(partial(true_with_probability, 0.80)),
                     Action(partial(player.turn_random_direction))
                 ])
             ])
