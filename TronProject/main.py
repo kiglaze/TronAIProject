@@ -539,107 +539,100 @@ def draw(center_turtle):
     # DECISION TREE LOGIC HERE
     # background color changes indicate what behavior the AI should be performing
     if p2.is_ai():
-        if p2.ai_type == AIType.TYPE_A:
+        execute_ai_player_behavior(p2, p1, turtle)
+    if p1.is_ai():
+        execute_ai_player_behavior(p1, p2, None)
+
+    turtle.ontimer(lambda: draw(center_turtle), 100)
+
+# Execute behavior for an AI player.
+# "turtle" is None if you don't want the background color to change when this player's active behavior tree changes.
+def execute_ai_player_behavior(player, opponent_player, turtle):
+    if player.is_ai():
+        if player.ai_type == AIType.TYPE_A:
             # Construct the decision tree, type A
             decision_tree = DecisionNode(
-                decision_function=partial(p2.is_head_within_dist_opponent_head, p1, 10),
-                true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
-                false_node=DecisionNode(decision_function=partial(p2.is_crash_into_opponent_anticipated,p1, 20),
-                                        true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
+                decision_function=partial(player.is_head_within_dist_opponent_head, opponent_player, 10),
+                true_node=Action(partial(player.set_behavior, Behavior.EVASIVE, turtle)),
+                false_node=DecisionNode(decision_function=partial(player.is_crash_into_opponent_anticipated, opponent_player, 20),
+                                        true_node=Action(partial(player.set_behavior, Behavior.EVASIVE, turtle)),
                                         false_node=DecisionNode(
-                                            decision_function=partial(p2.is_facing_opponent_com, p1),
-                                            true_node=Action(partial(p2.set_behavior, Behavior.RANDOM, turtle)),
-                                            false_node=Action(partial(p2.set_behavior, Behavior.AGGRESSIVE, turtle))
+                                            decision_function=partial(player.is_facing_opponent_com, opponent_player),
+                                            true_node=Action(partial(player.set_behavior, Behavior.RANDOM, turtle)),
+                                            false_node=Action(partial(player.set_behavior, Behavior.AGGRESSIVE, turtle))
                                         )
-                )
+                                        )
             )
             # Execute the decision tree
             outcome = decision_tree.run()
-        elif p2.ai_type == AIType.TYPE_B:
+        elif player.ai_type == AIType.TYPE_B:
             # Construct the decision tree, type B
-            decision_tree = DecisionNode(decision_function=partial(p2.is_longer_than, 50),
+            decision_tree = DecisionNode(decision_function=partial(player.is_longer_than, 50),
                                          true_node=DecisionNode(
-                                             decision_function=partial(p2.is_crash_into_opponent_anticipated, p1, 50),
+                                             decision_function=partial(player.is_crash_into_opponent_anticipated, opponent_player, 50),
                                              true_node=DecisionNode(
-                                                 decision_function=partial(p2.is_crash_into_opponent_anticipated, p1,
+                                                 decision_function=partial(player.is_crash_into_opponent_anticipated, opponent_player,
                                                                            50),
-                                                 true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
+                                                 true_node=Action(partial(player.set_behavior, Behavior.EVASIVE, turtle)),
                                                  false_node=Action(
                                                      partial(p2.set_behavior, Behavior.AGGRESSIVE, turtle))
-                                                 ),
-                                             false_node=DecisionNode(
-                                                 decision_function=partial(p2.is_facing_opponent_com, p1),
-                                                 true_node=Action(partial(p2.set_behavior, Behavior.RANDOM, turtle)),
-                                                 false_node=Action(
-                                                     partial(p2.set_behavior, Behavior.AGGRESSIVE, turtle))
-                                             )
                                              ),
-                                         false_node=DecisionNode(
-                                             decision_function=partial(p2.is_head_within_dist_opponent_head, p1, 30),
-                                             true_node=Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle)),
-                                             false_node=Action(partial(p2.set_behavior, Behavior.RANDOM, turtle))
+                                             false_node=DecisionNode(
+                                                 decision_function=partial(player.is_facing_opponent_com, opponent_player),
+                                                 true_node=Action(partial(player.set_behavior, Behavior.RANDOM, turtle)),
+                                                 false_node=Action(
+                                                     partial(player.set_behavior, Behavior.AGGRESSIVE, turtle))
                                              )
+                                         ),
+                                         false_node=DecisionNode(
+                                             decision_function=partial(player.is_head_within_dist_opponent_head, opponent_player, 30),
+                                             true_node=Action(partial(player.set_behavior, Behavior.EVASIVE, turtle)),
+                                             false_node=Action(partial(player.set_behavior, Behavior.RANDOM, turtle))
+                                         )
                                          )
             # Execute the decision tree
             outcome = decision_tree.run()
 
-        elif p2.ai_type == AIType.TYPE_RANDOM_ONLY:
+        elif player.ai_type == AIType.TYPE_RANDOM_ONLY:
             # Construct the decision tree, type C
-            decision_tree = Action(partial(p2.set_behavior, Behavior.RANDOM, turtle))
+            decision_tree = Action(partial(player.set_behavior, Behavior.RANDOM, turtle))
             # Execute the decision tree
             outcome = decision_tree.run()
-        elif p2.ai_type == AIType.TYPE_AGGRESSIVE_ONLY:
+        elif player.ai_type == AIType.TYPE_AGGRESSIVE_ONLY:
             # Construct the decision tree, type C
-            decision_tree = Action(partial(p2.set_behavior, Behavior.AGGRESSIVE, turtle))
+            decision_tree = Action(partial(player.set_behavior, Behavior.AGGRESSIVE, turtle))
             # Execute the decision tree
             outcome = decision_tree.run()
-        elif p2.ai_type == AIType.TYPE_EVASIVE_ONLY:
+        elif player.ai_type == AIType.TYPE_EVASIVE_ONLY:
             # Construct the decision tree, type C
-            decision_tree = Action(partial(p2.set_behavior, Behavior.EVASIVE, turtle))
+            decision_tree = Action(partial(player.set_behavior, Behavior.EVASIVE, turtle))
             # Execute the decision tree
             outcome = decision_tree.run()
 
-
-
-        # AGGRESSIVE BEHAVIOR TREE
-        # Constructing the behavior tree
-        #p2.set_behavior(Behavior.AGGRESSIVE)
-        #p2.set_behavior(Behavior.EVASIVE)
-
-        #root = Selector([
-        #    Sequence([
-        #        Condition(is_enemy_visible),
-        #        Action(attack)
-        #    ]),
-        #    Action(search_for_enemy)
-        #])
-
-        #p2.set_behavior(Behavior.RANDOM, turtle)
-
-        if p2.get_behavior() == Behavior.AGGRESSIVE:
+        if player.get_behavior() == Behavior.AGGRESSIVE:
             root = Selector([
                 Sequence([
-                    Condition(partial(p2.is_closer_to_projected_pixel, p1, 40 * MOVEMENT_SIZE)),
-                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(2, 5))),
-                    Action(partial(p2.face_closest_projected_enemy_pixel, p1, 40 * MOVEMENT_SIZE))
+                    Condition(partial(player.is_closer_to_projected_pixel, opponent_player, 40 * MOVEMENT_SIZE)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(2, 5))),
+                    Action(partial(player.face_closest_projected_enemy_pixel, opponent_player, 40 * MOVEMENT_SIZE))
                 ]),
                 Sequence([
-                    Condition(partial(p2.is_far_from_opponent, p1, 25)),
-                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(3, 6))),
+                    Condition(partial(player.is_far_from_opponent, opponent_player, 25)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(3, 6))),
                     Condition(partial(true_with_probability, 0.70)),
-                    Action(partial(p2.face_closest_enemy_pixel, p1))
+                    Action(partial(player.face_closest_enemy_pixel, opponent_player))
                 ]),
                 Sequence([
-                    Condition(partial(p2.is_facing_opposite_enemy, p1)),
-                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(15, 22))),
+                    Condition(partial(player.is_facing_opposite_enemy, opponent_player)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(15, 22))),
                     Condition(partial(true_with_probability, 0.80)),
-                    Action(partial(p2.turn_random_direction))
+                    Action(partial(player.turn_random_direction))
                 ]),
                 Sequence([
-                    Condition(partial(p2.is_projected_to_hit_wall, 6)),
-                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Condition(partial(player.is_projected_to_hit_wall, 6)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
                     Condition(partial(true_with_probability, 0.80)),
-                    Action(partial(p2.turn_random_direction))
+                    Action(partial(player.turn_random_direction))
                 ])
             ])
 
@@ -648,52 +641,51 @@ def draw(center_turtle):
             root = Selector([
                 Sequence([
                     # Need to avoid collision.
-                    Condition(partial(p2.is_facing_closest_opponent_pixel, p1)),
+                    Condition(partial(player.is_facing_closest_opponent_pixel, opponent_player)),
                     Condition(partial(true_with_probability, 0.70)),
-                    Action(partial(p2.face_away_from_closest_enemy_pixel, p1))
+                    Action(partial(player.face_away_from_closest_enemy_pixel, opponent_player))
                 ])
             ])
             root.run()
 
         elif p2.get_behavior() == Behavior.RANDOM:
             root = Selector([
-                
+
                 Sequence([
                     # Turning right
-                    Condition(partial(p2.is_right_turn_safe, p1)),
-                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Condition(partial(player.is_right_turn_safe, opponent_player)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
                     Condition(partial(true_with_probability, 0.25)),  # 50% probability
-                    Action(partial(p2.rotate_right))
+                    Action(partial(player.rotate_right))
                 ]),
                 Sequence([
                     # Turning left
-                    Condition(partial(p2.is_left_turn_safe, p1)),
-                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Condition(partial(player.is_left_turn_safe, opponent_player)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
                     Condition(partial(true_with_probability, 0.25)),  # 50% probability
-                    Action(partial(p2.rotate_left))
+                    Action(partial(player.rotate_left))
                 ]),
                 Sequence([
-                    Condition(partial(p2.is_projected_to_hit_wall, 3)),
-                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(2, 4))),
+                    Condition(partial(player.is_projected_to_hit_wall, 3)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(2, 4))),
                     Condition(partial(true_with_probability, 0.80)),  # 50% probability
-                    Action(partial(p2.turn_random_direction))
+                    Action(partial(player.turn_random_direction))
                 ]),
                 Sequence([
-                    Condition(partial(p2.is_projected_to_lose, 3, p1)),
-                    Condition(partial(p2.is_moves_since_turn_greater_than, random.randint(5, 10))),
-                    Action(partial(p2.turn_random_direction))
+                    Condition(partial(player.is_projected_to_lose, 3, opponent_player)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
+                    Action(partial(player.turn_random_direction))
                 ])
-                
+
             ])
             root.run()
-
-
-    turtle.ontimer(lambda: draw(center_turtle), 100)
 
 if __name__ == '__main__':
     p1xy = vector(-100, 0)
     p1aim = vector(MOVEMENT_SIZE, 0)
-    p1 = Player(p1xy, p1aim, 'red', 'a', 'd')
+    p1 = Player(p1xy, p1aim, 'red', 'a', 'd',
+                ai_type=ask_to_play_ai("Do you want Player 1 to be an AI or a Human? (AI/Human)",
+                                       "Should Player 1 be of AI type A or B? (A/B) \nYou may also alternatively type either: 'random', 'aggressive', or 'evasive' (for single behavior demo purposes)."))
     #p1body = set()
 
     p2xy = vector(100, 0)
