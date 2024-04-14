@@ -336,14 +336,20 @@ class Player:
     def is_projected_to_hit_wall(self, num_movements):
         projected_movements = self.get_projected_movements(num_movements)
         for projected in projected_movements:
+            
             if not self.is_inside_window(projected):
+                print("A wall! Wah!")
                 return True
         return False
     def is_projected_to_lose(self, num_movements, opponent_player):
         projected_movements = self.get_projected_movements(num_movements)
         opponent_body = opponent_player.get_body();
+        
         for projected in projected_movements:
-            if not self.is_inside_window(projected) or projected in opponent_body or projected in self.get_body():
+            if projected in self.get_body():
+                print("Oh no!", self.color)
+                return True
+            if (not self.is_inside_window(projected)) or projected in opponent_body or projected in self.get_body():
                 return True
         return False
 
@@ -550,6 +556,7 @@ def ask_to_play_ai(dialog_text_ai_human, dialog_text_ai_type):
     """Asks the player if they are ready to play."""
     # This uses the underlying Tkinter root window to ask for user input.
     answer = simpledialog.askstring("AI/Human?", dialog_text_ai_human)
+    
     if answer.lower() == 'ai':
         ai_type = simpledialog.askstring("AI Type?", dialog_text_ai_type)
         if ai_type.lower() == "a":
@@ -624,8 +631,8 @@ def draw(center_turtle):
     p2.move()
     p2head = p2.get_position().copy()
 
-    p1_failure = not inside(p1head) or p1head in p2.get_body()
-    p2_failure = not inside(p2head) or p2head in p1.get_body()
+    p1_failure = not inside(p1head) or p1head in p2.get_body() or p1head in p1.get_body()
+    p2_failure = not inside(p2head) or p2head in p1.get_body() or p2head in p2.get_body()
     if p1_failure and p2_failure:
         print('TIE!')
         write_text("Game Over!\nTIE.", 0, 0, "center", 20, center_turtle)
@@ -786,7 +793,16 @@ def execute_ai_player_behavior(player, opponent_player, turtle):
 
         elif player.get_behavior() == Behavior.RANDOM:
             root = Selector([
-
+                Sequence([
+                    Condition(partial(player.is_projected_to_hit_wall, 7)),
+                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(2, 4))),
+                    Condition(partial(true_with_probability, 0.80)),  # 50% probability
+                    Action(partial(player.turn_random_direction))
+                ]),
+                Sequence([
+                    Condition(partial(player.is_projected_to_lose, 5, player)),
+                    Action(partial(player.turn_random_direction))
+                ]),
                 Sequence([
                     # Turning right
                     Condition(partial(player.is_right_turn_safe, opponent_player)),
@@ -800,18 +816,8 @@ def execute_ai_player_behavior(player, opponent_player, turtle):
                     Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
                     Condition(partial(true_with_probability, 0.25)),  # 50% probability
                     Action(partial(player.rotate_left))
-                ]),
-                Sequence([
-                    Condition(partial(player.is_projected_to_hit_wall, 3)),
-                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(2, 4))),
-                    Condition(partial(true_with_probability, 0.80)),  # 50% probability
-                    Action(partial(player.turn_random_direction))
-                ]),
-                Sequence([
-                    Condition(partial(player.is_projected_to_lose, 3, player)),
-                    Condition(partial(player.is_moves_since_turn_greater_than, random.randint(5, 10))),
-                    Action(partial(player.turn_random_direction))
                 ])
+                
 
             ])
             root.run()
@@ -820,9 +826,8 @@ if __name__ == '__main__':
     p1xy = vector(-100, 0)
     p1aim = vector(MOVEMENT_SIZE, 0)
     p1 = Player(p1xy, p1aim, 'red', 'a', 'd',
-                ai_type=ask_to_play_ai("Do you want Player 1 to be an AI or a Human? (AI/Human)",
-                                       "Should Player 1 be of AI type A or B? (A/B) \nYou may also alternatively type either: 'random', 'aggressive', or 'evasive' (for single behavior demo purposes)."))
-    #p1body = set()
+                ai_type=AIType.TYPE_A)
+    
 
     p2xy = vector(100, 0)
     p2aim = vector(-1 * MOVEMENT_SIZE, 0)
